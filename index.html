@@ -566,7 +566,7 @@ tr:hover td{background:#F8FBFF}
 <!-- ===== SCRIPT ===== -->
 <script>
 // ========== CONFIG ==========
-let GAS_URL = localStorage.getItem('gas_url') || '';
+let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbz4TswpoYB5IKXlHh25WXZTwmEjs8-u3beFjy7Qy0btvH0QOFGAYuXNUDe-b1EGogve/exec';
 let DB = { Machines:[], Engine:[], Gear:[], Hydraulic:[], Grease:[], Cars:[], Bookings:[], Repairs:[] };
 
 // subTypes = default list; Gear/Hydraulic/Grease allow free-text custom additions
@@ -1817,10 +1817,11 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
 });
 
-const savedUrl = localStorage.getItem('gas_url') || '';
-if (savedUrl) {
-  document.getElementById('gasUrl').value = savedUrl;
-  GAS_URL = savedUrl;
+const savedUrl = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbz4TswpoYB5IKXlHh25WXZTwmEjs8-u3beFjy7Qy0btvH0QOFGAYuXNUDe-b1EGogve/exec';
+document.getElementById('gasUrl').value = savedUrl;
+GAS_URL = savedUrl;
+if (!localStorage.getItem('gas_url')) {
+  localStorage.setItem('gas_url', savedUrl);
 }
 
 renderDashboard();

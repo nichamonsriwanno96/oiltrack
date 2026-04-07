@@ -153,7 +153,23 @@ tr:hover td{background:#F8FBFF}
 .toast.show{transform:translateY(0);opacity:1}
 .toast.success{background:var(--success)}.toast.error{background:var(--danger)}
 
-/* ===== RESPONSIVE ===== */
+/* ===== OIL CONFIG SETTINGS ===== */
+.oil-cfg-card{background:#fff;border:1.5px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden}
+.oil-cfg-hdr{display:flex;align-items:center;gap:12px;padding:14px 18px;background:#FAFBFC;border-bottom:1.5px solid var(--border);flex-wrap:wrap;gap:10px}
+.oil-cfg-icon{font-size:22px;cursor:pointer;user-select:none}
+.oil-cfg-name{font-size:16px;font-weight:700;border:1.5px solid transparent;border-radius:6px;padding:4px 8px;background:transparent;font-family:var(--font);color:#1a1a2e;min-width:120px;transition:.15s}
+.oil-cfg-name:focus{border-color:var(--primary);background:#fff;outline:none;box-shadow:0 0 0 3px #1976D220}
+.oil-cfg-interval{width:90px;padding:5px 10px;font-size:14px;border:1.5px solid var(--border);border-radius:6px;font-family:var(--font);text-align:center}
+.oil-cfg-interval:focus{border-color:var(--primary);outline:none}
+.oil-cfg-body{padding:14px 18px}
+.sub-tag{display:inline-flex;align-items:center;gap:5px;background:#E3F2FD;border:1px solid #90CAF9;color:#1565C0;border-radius:20px;padding:4px 12px;font-size:13px;font-weight:600;margin:3px}
+.sub-tag .tag-del{cursor:pointer;color:#90A4AE;font-size:15px;line-height:1;margin-left:2px;transition:.15s}
+.sub-tag .tag-del:hover{color:var(--danger)}
+.add-sub-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.add-sub-input{flex:1;max-width:260px;padding:6px 12px;font-size:13px;border:1.5px solid var(--border);border-radius:20px;font-family:var(--font)}
+.add-sub-input:focus{border-color:var(--success);outline:none}
+
+
 @media(max-width:640px){
   .form-grid{grid-template-columns:1fr}
   .stat-row{grid-template-columns:repeat(3,1fr)}
@@ -192,7 +208,9 @@ tr:hover td{background:#F8FBFF}
 <!-- ===== SETTINGS PAGE ===== -->
 <div id="page-settings" class="page">
   <h2 style="margin-bottom:18px">⚙️ ตั้งค่าระบบ</h2>
-  <div class="config-panel">
+
+  <!-- Google Sheets connection -->
+  <div class="config-panel" style="margin-bottom:20px">
     <h3 style="margin-bottom:12px">🔗 เชื่อมต่อ Google Sheets</h3>
     <div class="form-grid">
       <div>
@@ -200,38 +218,35 @@ tr:hover td{background:#F8FBFF}
         <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveConfig()">
       </div>
     </div>
-    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="testConnection()">🔗 ทดสอบการเชื่อมต่อ</button>
       <button class="btn btn-success" onclick="initRemoteSheets()">🏗 สร้าง Sheets (ครั้งแรก)</button>
       <button class="btn btn-outline" onclick="syncData()">🔄 ดึงข้อมูลใหม่</button>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin:0">
-        <input type="checkbox" id="autoSyncToggle" onchange="toggleAutoSync()" style="width:auto">
-        Auto-sync ทุก 5 นาที
-      </label>
     </div>
     <div id="connStatus" style="margin-top:12px;font-size:13px"></div>
   </div>
 
-  <!-- Oil Type Manager -->
-  <div class="card" style="margin-bottom:18px">
-    <div class="card-header">
-      <span style="font-size:18px">🛢</span>
-      <h3>จัดการประเภทน้ำมัน (Global)</h3>
-      <span style="font-size:12px;color:#90A4AE;margin-left:auto">แก้ไขรายการเริ่มต้นที่ใช้กับทุกเครื่องจักร</span>
+  <!-- Oil type management -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+    <h3>🛢 จัดการประเภทน้ำมัน</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:12px;color:#78909C">การเปลี่ยนแปลงจะ sync ไป Sheet อัตโนมัติ</span>
+      <button class="btn btn-sm" style="background:#E3F2FD;color:var(--primary);border:1px solid #90CAF9" onclick="forcePushOilConfig()">☁️ Push ไป Sheet ทันที</button>
+      <button class="btn btn-success btn-sm" onclick="addOilType()">＋ เพิ่มหัวข้อหลัก</button>
     </div>
-    <div class="card-body" id="oilConfigManager"></div>
   </div>
+  <div id="oilConfigList"></div>
 
-  <div class="card" style="padding:18px">
-    <h3 style="margin-bottom:10px">📋 วิธีใช้งาน</h3>
+  <!-- How to use -->
+  <div class="card" style="padding:18px;margin-top:20px">
+    <h3 style="margin-bottom:10px">📋 วิธีใช้งาน Google Sheets</h3>
     <ol style="font-size:14px;line-height:2;color:#546E7A;padding-left:20px">
       <li>สร้าง Google Spreadsheet ใหม่</li>
       <li>ไปที่ Extensions → Apps Script</li>
       <li>วางโค้ดจากไฟล์ <code>Code.gs</code> ลงไป</li>
       <li>รัน function <code>setup()</code> เพื่อสร้าง Sheet</li>
       <li>Deploy → New deployment → Web app (Anyone can access)</li>
-      <li>Copy URL มาวางในช่องด้านบน</li>
-      <li>กด "ทดสอบการเชื่อมต่อ"</li>
+      <li>Copy URL มาวางในช่องด้านบน แล้วกด "ทดสอบการเชื่อมต่อ"</li>
     </ol>
   </div>
 </div>
@@ -399,13 +414,10 @@ tr:hover td{background:#F8FBFF}
       </div>
 
       <div class="form-grid">
+        <div class="form-group"><label>ชั่วโมงครั้งก่อน</label><input type="number" id="o-prevhours" placeholder="ชม."></div>
         <div class="form-group">
           <label>ชั่วโมงที่เปลี่ยน *</label>
-          <input type="number" id="o-curhours" placeholder="ชม. เช่น 1250" oninput="calcNextDate()">
-        </div>
-        <div class="form-group">
-          <label>เปลี่ยนทุกกี่ชั่วโมง *</label>
-          <input type="number" id="o-interval" placeholder="ชม. เช่น 500" oninput="calcNextDate()">
+          <input type="number" id="o-curhours" placeholder="ชม." oninput="calcNextDate()">
         </div>
         <div class="form-group">
           <label>วันที่เปลี่ยน * (พ.ศ.)</label>
@@ -415,14 +427,13 @@ tr:hover td{background:#F8FBFF}
           <label>อัตราการใช้ (ชม./วัน) <span style="color:#90A4AE;font-weight:400">— ช่วยคำนวณวันถัดไป</span></label>
           <input type="number" id="o-rate" placeholder="เช่น 8" oninput="calcNextDate()" min="0.1" step="0.5">
         </div>
-        <input type="hidden" id="o-prevhours">
         <div class="form-group">
-          <label>ครั้งถัดไป (ชม.) <span id="nextHoursCalcLabel" style="color:#1976D2;font-size:11px;font-weight:700"></span></label>
-          <input type="number" id="o-nexthours" placeholder="คำนวณอัตโนมัติ — แก้ไขได้" oninput="onNextHoursManual()">
+          <label>ครั้งถัดไป (ชม.)</label>
+          <input type="number" id="o-nexthours" placeholder="คำนวณอัตโนมัติ" oninput="calcNextDate()">
         </div>
         <div class="form-group">
           <label>วันที่ครั้งถัดไป (พ.ศ.) <span id="nextDateCalcLabel" style="color:#1976D2;font-size:11px;font-weight:700"></span></label>
-          <input id="o-nextdate" placeholder="คำนวณอัตโนมัติ — แก้ไขได้" oninput="onNextDateManual()">
+          <input id="o-nextdate" placeholder="คำนวณอัตโนมัติ">
         </div>
         <div class="form-group"><label>ยี่ห้อน้ำมัน</label><input id="o-brand" placeholder="เช่น Shell, Mobil, Total"></div>
         <div class="form-group"><label>เกรด/ชนิด</label><input id="o-grade" placeholder="เช่น 15W-40 CI4"></div>
@@ -530,200 +541,158 @@ tr:hover td{background:#F8FBFF}
 
 <div id="toast" class="toast"></div>
 
-<!-- Edit Oil Record Modal -->
-<div class="modal-overlay" id="editOilModal">
-  <div class="modal" style="width:600px">
-    <div class="modal-header">
-      <span style="font-size:20px">✏️</span>
-      <h3>แก้ไขข้อมูลน้ำมัน</h3>
-    </div>
-    <div class="modal-body">
-      <div style="background:#FFF8E1;border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:13px">
-        <strong id="eOilMachineLabel"></strong> &nbsp;—&nbsp; <span id="eOilTypeLabel" style="color:#1565C0;font-weight:600"></span>
-        <span id="eOilSubLabel" style="color:#546E7A"></span>
-      </div>
-      <div class="form-grid">
-        <div class="form-group"><label>ชั่วโมงครั้งก่อน</label><input type="number" id="eo-prevhours" placeholder="ชม."></div>
-        <div class="form-group"><label>ชั่วโมงที่เปลี่ยน *</label><input type="number" id="eo-curhours" placeholder="ชม."></div>
-        <div class="form-group"><label>วันที่เปลี่ยน * (พ.ศ.)</label><input id="eo-date" placeholder="เช่น 2569-03-27"></div>
-        <div class="form-group"><label>อัตราการใช้ (ชม./วัน)</label><input type="number" id="eo-rate" placeholder="เช่น 8" min="0.1" step="0.5"></div>
-        <div class="form-group"><label>ครั้งถัดไป (ชม.)</label><input type="number" id="eo-nexthours" placeholder="ชม."></div>
-        <div class="form-group"><label>วันที่ครั้งถัดไป (พ.ศ.)</label><input id="eo-nextdate" placeholder="2569-xx-xx"></div>
-        <div class="form-group"><label>ยี่ห้อน้ำมัน</label><input id="eo-brand" placeholder="เช่น Shell, Mobil"></div>
-        <div class="form-group"><label>เกรด/ชนิด</label><input id="eo-grade" placeholder="เช่น 15W-40"></div>
-        <div class="form-group"><label>ปริมาณ (ลิตร)</label><input type="number" id="eo-liters"></div>
-        <div class="form-group"><label>ช่างผู้เปลี่ยน</label><input id="eo-tech"></div>
-        <div class="form-group full"><label>หมายเหตุ</label><input id="eo-note"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-primary" onclick="saveEditOilRecord()">💾 บันทึก</button>
-      <button class="btn btn-ghost" onclick="closeModal("editOilModal")">ยกเลิก</button>
-    </div>
-  </div>
-</div>
-
 <!-- ===== SCRIPT ===== -->
 <script>
+'use strict';
 // ========== CONFIG ==========
-let GAS_URL = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbz4TswpoYB5IKXlHh25WXZTwmEjs8-u3beFjy7Qy0btvH0QOFGAYuXNUDe-b1EGogve/exec';
+let GAS_URL = localStorage.getItem('gas_url') || '';
 let DB = { Machines:[], Engine:[], Gear:[], Hydraulic:[], Grease:[], Cars:[], Bookings:[], Repairs:[] };
 
-// subTypes = default list; Gear/Hydraulic/Grease allow free-text custom additions
 const OIL_CONFIG_DEFAULT = {
   Engine:    { label:'น้ำมันเครื่อง',   icon:'🔧', interval:500,  subTypes:[] },
   Gear:      { label:'น้ำมันเกียร์',    icon:'⚙️', interval:1000, subTypes:['โรตารี่','หัวคาว','มอเตอร์'] },
   Hydraulic: { label:'น้ำมันไฮดรอลิค', icon:'💧', interval:2000, subTypes:['ไฮดรอลิคหลัก','Pilot'] },
   Grease:    { label:'จารบี',           icon:'🟡', interval:250,  subTypes:['แขนตัก','แขนขุด','Bucket','สลักตีนตะขาบ','ลูกปืน Swing'] },
 };
-// โหลด OIL_CONFIG จาก localStorage ถ้ามีการแก้ไข
-function loadOilConfig() {
-  const saved = localStorage.getItem('oil_config');
-  if (saved) {
-    try {
-      const parsed = JSON.parse(saved);
-      Object.keys(OIL_CONFIG_DEFAULT).forEach(k => {
-        if (parsed[k]) {
-          OIL_CONFIG[k].label    = parsed[k].label    || OIL_CONFIG_DEFAULT[k].label;
-          OIL_CONFIG[k].icon     = parsed[k].icon     || OIL_CONFIG_DEFAULT[k].icon;
-          OIL_CONFIG[k].interval = parsed[k].interval || OIL_CONFIG_DEFAULT[k].interval;
-          OIL_CONFIG[k].subTypes = parsed[k].subTypes || [...OIL_CONFIG_DEFAULT[k].subTypes];
-        }
-      });
-    } catch(e) {}
-  }
-}
-function saveOilConfig() { localStorage.setItem('oil_config', JSON.stringify(OIL_CONFIG)); }
-
-const OIL_CONFIG = {
-  Engine:    { ...OIL_CONFIG_DEFAULT.Engine,    subTypes:[...OIL_CONFIG_DEFAULT.Engine.subTypes] },
-  Gear:      { ...OIL_CONFIG_DEFAULT.Gear,      subTypes:[...OIL_CONFIG_DEFAULT.Gear.subTypes] },
-  Hydraulic: { ...OIL_CONFIG_DEFAULT.Hydraulic, subTypes:[...OIL_CONFIG_DEFAULT.Hydraulic.subTypes] },
-  Grease:    { ...OIL_CONFIG_DEFAULT.Grease,    subTypes:[...OIL_CONFIG_DEFAULT.Grease.subTypes] },
-};
-loadOilConfig();
-// ทุก type เพิ่ม/ลบ subtype ได้หมด
+let OIL_CONFIG = JSON.parse(localStorage.getItem('oil_config') || 'null') || JSON.parse(JSON.stringify(OIL_CONFIG_DEFAULT));
 
 let CUSTOM_SUB  = JSON.parse(localStorage.getItem('custom_sub')  || '{}');
-let HIDDEN_BASE = JSON.parse(localStorage.getItem('hidden_base') || '{}'); // base subtypes ที่ถูก "ลบ" ต่อเครื่อง
+let HIDDEN_BASE = JSON.parse(localStorage.getItem('hidden_base') || '{}');
 let RATE_STORE  = JSON.parse(localStorage.getItem('rate_store')  || '{}');
 
-function saveCustomSub()  { localStorage.setItem('custom_sub',  JSON.stringify(CUSTOM_SUB)); }
-function saveHiddenBase() { localStorage.setItem('hidden_base', JSON.stringify(HIDDEN_BASE)); }
-function saveRateStore()  { localStorage.setItem('rate_store',  JSON.stringify(RATE_STORE)); }
+const ICON_OPTIONS = ['🔧','⚙️','💧','🟡','🛢','🔩','🏗','💡','🔴','🟢','🟠','⛽','🪛','🔨'];
+let iconPickerTarget = null;
 
-// รวม base (ที่ไม่ถูกซ่อน) + custom
-function getSubTypes(machineId, type) {
-  const key    = `${machineId}_${type}`;
-  const hidden = HIDDEN_BASE[key] || [];
-  const base   = OIL_CONFIG[type].subTypes.filter(s => !hidden.includes(s));
-  const extra  = (CUSTOM_SUB[key] || []).filter(e => !base.includes(e) && !hidden.includes(e));
-  return [...base, ...extra];
-}
-function addCustomSub(machineId, type, name) {
-  const key = `${machineId}_${type}`;
-  if (!CUSTOM_SUB[key]) CUSTOM_SUB[key] = [];
-  if (!CUSTOM_SUB[key].includes(name)) CUSTOM_SUB[key].push(name);
-  // ถ้าชื่อซ้ำกับ base ที่เคยซ่อน → คืนกลับมา
-  const hKey = key;
-  if (HIDDEN_BASE[hKey]) HIDDEN_BASE[hKey] = HIDDEN_BASE[hKey].filter(s => s !== name);
-  saveCustomSub(); saveHiddenBase();
-}
-// ลบ subtype ใดก็ได้ (base → เพิ่มใน hidden, custom → เอาออกจาก array)
-function removeSubType(machineId, type, name) {
-  const key  = `${machineId}_${type}`;
-  const base = OIL_CONFIG[type].subTypes;
-  if (base.includes(name)) {
-    if (!HIDDEN_BASE[key]) HIDDEN_BASE[key] = [];
-    if (!HIDDEN_BASE[key].includes(name)) HIDDEN_BASE[key].push(name);
-    saveHiddenBase();
-  } else {
-    CUSTOM_SUB[key] = (CUSTOM_SUB[key]||[]).filter(s => s !== name);
-    saveCustomSub();
+// ========== OIL CONFIG STORAGE ==========
+function saveOilConfig(pushToSheet) {
+  localStorage.setItem('oil_config', JSON.stringify(OIL_CONFIG));
+  if (pushToSheet && GAS_URL) {
+    apiPost({ action: 'saveOilConfig', config: OIL_CONFIG })
+      .then(function() { toast('💾 บันทึกการตั้งค่าไป Sheet แล้ว ✓', 'success'); })
+      .catch(function() { toast('⚠️ บันทึก local แล้ว แต่ยังไม่ได้ sync ไป Sheet', ''); });
   }
 }
-// ตรวจว่า subtype นี้มาจาก base หรือ custom
-function isBaseSubType(type, name) { return OIL_CONFIG[type].subTypes.includes(name); }
-// rate per machine/type/subType
-function getRateKey(machineId, type, subType) { return `${machineId}_${type}_${subType||'main'}`; }
-function getSavedRate(machineId, type, subType) { return RATE_STORE[getRateKey(machineId,type,subType)] || ''; }
+
+function applyRemoteOilConfig(remoteConfig) {
+  if (!remoteConfig || typeof remoteConfig !== 'object') return;
+  OIL_CONFIG = remoteConfig;
+  localStorage.setItem('oil_config', JSON.stringify(OIL_CONFIG));
+  renderOilConfigSettings();
+}
+
+// ========== SUB-TYPE STORAGE ==========
+function _saveCustomSub()  { localStorage.setItem('custom_sub',  JSON.stringify(CUSTOM_SUB)); }
+function _saveHiddenBase() { localStorage.setItem('hidden_base', JSON.stringify(HIDDEN_BASE)); }
+function _saveRateStore()  { localStorage.setItem('rate_store',  JSON.stringify(RATE_STORE)); }
+
+function getSubTypes(machineId, type) {
+  var key    = machineId + '_' + type;
+  var hidden = HIDDEN_BASE[key] || [];
+  var base   = OIL_CONFIG[type].subTypes.filter(function(s) { return hidden.indexOf(s) === -1; });
+  var extra  = (CUSTOM_SUB[key] || []).filter(function(e) { return base.indexOf(e) === -1 && hidden.indexOf(e) === -1; });
+  return base.concat(extra);
+}
+
+function addCustomSub(machineId, type, name) {
+  var key = machineId + '_' + type;
+  if (!CUSTOM_SUB[key]) CUSTOM_SUB[key] = [];
+  if (CUSTOM_SUB[key].indexOf(name) === -1) CUSTOM_SUB[key].push(name);
+  if (HIDDEN_BASE[key]) HIDDEN_BASE[key] = HIDDEN_BASE[key].filter(function(s) { return s !== name; });
+  _saveCustomSub(); _saveHiddenBase();
+}
+
+function removeSubType(machineId, type, name) {
+  var key  = machineId + '_' + type;
+  var base = OIL_CONFIG[type].subTypes;
+  if (base.indexOf(name) !== -1) {
+    if (!HIDDEN_BASE[key]) HIDDEN_BASE[key] = [];
+    if (HIDDEN_BASE[key].indexOf(name) === -1) HIDDEN_BASE[key].push(name);
+    _saveHiddenBase();
+  } else {
+    CUSTOM_SUB[key] = (CUSTOM_SUB[key] || []).filter(function(s) { return s !== name; });
+    _saveCustomSub();
+  }
+}
+
+function isBaseSubType(type, name) {
+  return OIL_CONFIG[type].subTypes.indexOf(name) !== -1;
+}
+
+function getRateKey(machineId, type, subType) { return machineId + '_' + type + '_' + (subType || 'main'); }
+function getSavedRate(machineId, type, subType) { return RATE_STORE[getRateKey(machineId, type, subType)] || ''; }
 function saveRate(machineId, type, subType, rate) {
-  if (rate) RATE_STORE[getRateKey(machineId,type,subType)] = rate;
-  saveRateStore();
+  if (rate) RATE_STORE[getRateKey(machineId, type, subType)] = rate;
+  _saveRateStore();
 }
 
-// ========== UTILS ==========
+// ========== DATE UTILS ==========
 function todayThai() {
-  const d = new Date();
-  return `${d.getFullYear()+543}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  var d = new Date();
+  return (d.getFullYear()+543) + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
 }
 
-// แปลงวันที่ทุก format → Date object (รองรับ ISO, พ.ศ., ค.ศ.)
 function parseAnyDate(s) {
   if (!s) return null;
-  const str = String(s).trim();
-  // ISO datetime: 2568-09-08T17:00:00.000Z หรือ 2025-09-08T...
-  if (str.includes('T')) {
-    const d = new Date(str);
+  var str = String(s).trim();
+  if (str.indexOf('T') !== -1) {
+    var d = new Date(str);
     if (!isNaN(d)) return d;
   }
-  const p = str.split('-');
+  var p = str.split('-');
   if (p.length === 3) {
-    const y = parseInt(p[0]);
-    const m = parseInt(p[1]) - 1;
-    const d = parseInt(p[2]);
-    if (isNaN(y)||isNaN(m)||isNaN(d)) return null;
-    // ถ้าปี > 2400 = พ.ศ. → แปลง, ถ้า < 2400 = ค.ศ. ใช้ตรง
-    const year = y > 2400 ? y - 543 : y;
-    return new Date(year, m, d);
+    var y = parseInt(p[0], 10);
+    var m = parseInt(p[1], 10) - 1;
+    var day = parseInt(p[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(day)) return null;
+    var year = y > 2400 ? y - 543 : y;
+    return new Date(year, m, day);
   }
   return null;
 }
 
-// แปลงค่า date ใดก็ได้ → string พ.ศ. สวย เช่น "2569-03-27"
 function toThaiDateStr(s) {
   if (!s) return '';
-  const d = parseAnyDate(s);
-  if (!d || isNaN(d)) return String(s).split('T')[0]; // fallback
-  const y = d.getFullYear() + 543;
-  const m = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${dd}`;
+  var d = parseAnyDate(s);
+  if (!d || isNaN(d)) return String(s).split('T')[0];
+  var y = d.getFullYear() + 543;
+  var m = String(d.getMonth()+1).padStart(2,'0');
+  var dd = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + dd;
 }
 
-// แสดงผลสวย: "27 มี.ค. 2569"
-const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+var THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 function formatThaiDate(s) {
   if (!s) return '—';
-  const d = parseAnyDate(s);
+  var d = parseAnyDate(s);
   if (!d || isNaN(d)) return String(s).split('T')[0];
-  return `${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear()+543}`;
+  return d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear()+543);
 }
 
-function thaiToDate(s) {
-  return parseAnyDate(s);
-}
+function thaiToDate(s) { return parseAnyDate(s); }
+
 function daysUntil(s) {
-  const d = parseAnyDate(s);
+  var d = parseAnyDate(s);
   if (!d || isNaN(d)) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
+  var today = new Date(); today.setHours(0,0,0,0);
   return Math.ceil((d - today) / 86400000);
 }
 
-// normalize ข้อมูลจาก Sheet: แปลง ISO date → พ.ศ. string ทุก record
 function normalizeRecord(rec) {
-  const dateFields = ['changeDate','nextDate','repairDate','bookDate','createdAt'];
-  const out = { ...rec };
-  dateFields.forEach(f => { if (out[f]) out[f] = toThaiDateStr(out[f]); });
+  var dateFields = ['changeDate','nextDate','repairDate','bookDate','createdAt'];
+  var out = Object.assign({}, rec);
+  dateFields.forEach(function(f) { if (out[f]) out[f] = toThaiDateStr(out[f]); });
   return out;
 }
+
 function normalizeDB(data) {
-  const out = {};
-  Object.keys(data).forEach(sheet => {
+  var out = {};
+  Object.keys(data).forEach(function(sheet) {
     out[sheet] = Array.isArray(data[sheet]) ? data[sheet].map(normalizeRecord) : data[sheet];
   });
   return out;
 }
+
+// ========== STATUS ==========
 function statusOf(days) {
   if (days === null) return 'unknown';
   if (days < 0) return 'overdue';
@@ -731,846 +700,602 @@ function statusOf(days) {
   if (days <= 14) return 'soon';
   return 'ok';
 }
-const STATUS_LABEL = {overdue:'🔴 เลยกำหนด', urgent:'🟠 ด่วน', soon:'🟡 ใกล้ถึง', ok:'🟢 ปกติ', unknown:'⚪ ไม่ทราบ'};
+
+var STATUS_LABEL = { overdue:'🔴 เลยกำหนด', urgent:'🟠 ด่วน', soon:'🟡 ใกล้ถึง', ok:'🟢 ปกติ', unknown:'⚪ ไม่ทราบ' };
+
 function badge(status, text) {
-  return `<span class="badge badge-${status}">${text || STATUS_LABEL[status]}</span>`;
+  return '<span class="badge badge-' + status + '">' + (text || STATUS_LABEL[status]) + '</span>';
 }
+
 function numFmt(n) { return n != null ? Number(n).toLocaleString() : '—'; }
+
 function uuid() { return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2,7); }
-function toast(msg, type='') {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.className = 'toast show ' + type;
-  setTimeout(() => el.className = 'toast', 3000);
+
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || '');
+  setTimeout(function() { el.className = 'toast'; }, 3500);
 }
 
 // ========== PAGE / UI ==========
-let activeStatusFilter = '';
+var activeStatusFilter = '';
+var expandedMachine = null;
 document.getElementById('todayLabel').textContent = todayThai();
 
 function showPage(name, btn) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
   document.getElementById('page-' + name).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (name === 'machines') renderMachines();
-  if (name === 'cars') renderCars();
-  if (name === 'bookings') renderBookings();
-  if (name === 'repairs') renderRepairs();
-  if (name === 'alerts') renderAlerts();
+  if (name === 'machines')  renderMachines();
+  if (name === 'cars')      renderCars();
+  if (name === 'bookings')  renderBookings();
+  if (name === 'repairs')   renderRepairs();
+  if (name === 'alerts')    renderAlerts();
   if (name === 'dashboard') renderDashboard();
-  if (name === 'settings') renderOilConfigManager();
+  if (name === 'settings')  renderOilConfigSettings();
 }
+
 function setStatusFilter(el, s) {
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.filter-chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   activeStatusFilter = s;
   renderMachines();
 }
+
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
-function saveConfig() { localStorage.setItem('gas_url', document.getElementById('gasUrl').value); GAS_URL = document.getElementById('gasUrl').value; }
-
-// ========== AUTO-SYNC ==========
-let autoSyncInterval = null;
-function toggleAutoSync() {
-  const on = document.getElementById('autoSyncToggle').checked;
-  localStorage.setItem('auto_sync', on ? '1' : '0');
-  if (on) {
-    if (!autoSyncInterval) autoSyncInterval = setInterval(() => { if (GAS_URL) syncData(true); }, 5 * 60 * 1000);
-    toast('✅ เปิด Auto-sync ทุก 5 นาที', 'success');
-  } else {
-    clearInterval(autoSyncInterval); autoSyncInterval = null;
-    toast('Auto-sync ปิดแล้ว', '');
-  }
-}
-
-// ========== OIL CONFIG MANAGER ==========
-function renderOilConfigManager() {
-  const el = document.getElementById('oilConfigManager');
-  if (!el) return;
-  el.innerHTML = Object.entries(OIL_CONFIG).map(([type, cfg]) => `
-    <div style="border:1.5px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;background:#FAFBFC">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-        <span style="font-size:22px">${cfg.icon}</span>
-        <div style="flex:1">
-          <input id="cfg-label-${type}" value="${cfg.label}" style="font-weight:700;font-size:15px;max-width:200px"
-            onchange="updateOilConfigLabel('${type}')">
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label style="margin:0;font-size:13px">ระยะเปลี่ยน (ชม.)</label>
-          <input type="number" id="cfg-interval-${type}" value="${cfg.interval}" style="width:90px"
-            onchange="updateOilConfigInterval('${type}')">
-        </div>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:#546E7A;margin-bottom:8px">ประเภทย่อย (Global Default):</div>
-        <div id="cfg-subs-${type}" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">${
-          cfg.subTypes.length
-            ? cfg.subTypes.map(s => `<span style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:16px;padding:4px 12px;font-size:13px;display:flex;align-items:center;gap:6px">
-                ${s}
-                <button onclick="removeGlobalSubType('${type}','${s.replace(/'/g,"\\'")}')'" style="background:none;border:none;cursor:pointer;color:#ef5350;font-size:14px;padding:0;line-height:1">✕</button>
-              </span>`)
-            .join('')
-            : '<span style="color:#90A4AE;font-size:13px">ไม่มีประเภทย่อย</span>'
-        }</div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <input id="cfg-newsub-${type}" placeholder="พิมพ์ชื่อประเภทย่อยใหม่..." style="max-width:260px"
-            onkeydown="if(event.key==='Enter') addGlobalSubType('${type}')">
-          <button class="btn btn-sm" style="background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7"
-            onclick="addGlobalSubType('${type}')">＋ เพิ่ม</button>
-        </div>
-      </div>
-    </div>`).join('');
-}
-
-function updateOilConfigLabel(type) {
-  OIL_CONFIG[type].label = document.getElementById('cfg-label-' + type).value.trim() || OIL_CONFIG[type].label;
-  saveOilConfig();
-}
-function updateOilConfigInterval(type) {
-  const val = parseInt(document.getElementById('cfg-interval-' + type).value);
-  if (!isNaN(val) && val > 0) { OIL_CONFIG[type].interval = val; saveOilConfig(); toast('บันทึกแล้ว ✓', 'success'); }
-}
-function addGlobalSubType(type) {
-  const inp = document.getElementById('cfg-newsub-' + type);
-  const name = (inp.value || '').trim();
-  if (!name) return;
-  if (!OIL_CONFIG[type].subTypes.includes(name)) {
-    OIL_CONFIG[type].subTypes.push(name);
-    saveOilConfig();
-    toast('✅ เพิ่ม "' + name + '" แล้ว', 'success');
-  }
-  inp.value = '';
-  renderOilConfigManager();
-}
-function removeGlobalSubType(type, name) {
-  if (!confirm('ลบ "' + name + '" ออกจาก Global Default?\n(ไม่กระทบข้อมูลที่บันทึกไปแล้ว)')) return;
-  OIL_CONFIG[type].subTypes = OIL_CONFIG[type].subTypes.filter(s => s !== name);
-  saveOilConfig();
-  renderOilConfigManager();
-  toast('ลบ "' + name + '" แล้ว', 'success');
-}
-
-// ========== EDIT OIL RECORD ==========
-let editOilCtx = {};
-function openEditOilModal(type, recordId) {
-  if (event) event.stopPropagation();
-  const rec = (DB[type]||[]).find(r => String(r.id) === String(recordId));
-  if (!rec) return;
-  editOilCtx = { type, recordId };
-  const cfg = OIL_CONFIG[type];
-  document.getElementById('eOilMachineLabel').textContent = rec.machineName || '';
-  document.getElementById('eOilTypeLabel').textContent = cfg.label;
-  document.getElementById('eOilSubLabel').textContent = rec.subType ? ' — ' + rec.subType : '';
-  document.getElementById('eo-prevhours').value = rec.prevHours || '';
-  document.getElementById('eo-curhours').value = rec.currentHours || '';
-  document.getElementById('eo-date').value = rec.changeDate || '';
-  document.getElementById('eo-rate').value = rec.rate || '';
-  document.getElementById('eo-nexthours').value = rec.nextHours || '';
-  document.getElementById('eo-nextdate').value = rec.nextDate || '';
-  document.getElementById('eo-brand').value = rec.oilBrand || '';
-  document.getElementById('eo-grade').value = rec.oilGrade || '';
-  document.getElementById('eo-liters').value = rec.liters || '';
-  document.getElementById('eo-tech').value = rec.technicianName || '';
-  document.getElementById('eo-note').value = rec.note || '';
-  document.getElementById('editOilModal').classList.add('open');
-}
-async function saveEditOilRecord() {
-  const { type, recordId } = editOilCtx;
-  const idx = (DB[type]||[]).findIndex(r => String(r.id) === String(recordId));
-  if (idx < 0) return;
-  const changeDate = document.getElementById('eo-date').value;
-  if (!changeDate) { toast('กรุณาระบุวันที่เปลี่ยน', 'error'); return; }
-  const updated = {
-    ...DB[type][idx],
-    prevHours:       +document.getElementById('eo-prevhours').value || null,
-    currentHours:    +document.getElementById('eo-curhours').value || null,
-    changeDate,
-    nextHours:       +document.getElementById('eo-nexthours').value || null,
-    nextDate:        document.getElementById('eo-nextdate').value,
-    oilBrand:        document.getElementById('eo-brand').value,
-    oilGrade:        document.getElementById('eo-grade').value,
-    liters:          document.getElementById('eo-liters').value || null,
-    technicianName:  document.getElementById('eo-tech').value,
-    note:            document.getElementById('eo-note').value,
-  };
-  DB[type][idx] = updated;
-  closeModal('editOilModal');
-  expandedMachine = updated.machineId;
-  renderMachines(); renderDashboard();
-  try {
-    await apiPost({ action: 'update', sheet: type, id: recordId, data: updated });
-    toast('✅ แก้ไขสำเร็จ', 'success');
-  } catch(e) { toast('แก้ไข offline', ''); }
+function saveConfig() {
+  GAS_URL = document.getElementById('gasUrl').value;
+  localStorage.setItem('gas_url', GAS_URL);
 }
 
 // ========== API ==========
-async function apiGet(params = {}) {
-  if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); throw new Error('No URL'); }
-  const q = new URLSearchParams({ ...params, _t: Date.now() }).toString();
-  const r = await fetch(GAS_URL + '?' + q);
-  return r.json();
-}
-async function apiPost(body) {
-  if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); throw new Error('No URL'); }
-  const r = await fetch(GAS_URL, { method: 'POST', body: JSON.stringify(body) });
-  return r.json();
+function apiGet(params) {
+  if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); return Promise.reject(new Error('No URL')); }
+  var q = new URLSearchParams(Object.assign({}, params, { _t: Date.now() })).toString();
+  return fetch(GAS_URL + '?' + q).then(function(r) { return r.json(); });
 }
 
-async function syncData(silent = false) {
-  const btn = document.getElementById('syncBtn');
+function apiPost(body) {
+  if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); return Promise.reject(new Error('No URL')); }
+  return fetch(GAS_URL, { method:'POST', body: JSON.stringify(body) }).then(function(r) { return r.json(); });
+}
+
+function syncData(silent) {
+  var btn = document.getElementById('syncBtn');
   btn.classList.add('syncing'); btn.innerHTML = '<span class="loading-spinner"></span> Sync...';
-  try {
-    const data = await apiGet({ action: 'getAll' });
+  return apiGet({ action:'getAll' }).then(function(data) {
     if (data.error) throw new Error(data.error);
-    // normalize ISO dates → พ.ศ. string
-    const norm = normalizeDB(data);
-    Object.keys(DB).forEach(k => { if (norm[k]) DB[k] = norm[k]; });
-    renderDashboard();
-    renderMachines();
-    renderCars();
-    renderBookings();
-    renderRepairs();
-    renderAlerts();
+    var norm = normalizeDB(data);
+    Object.keys(DB).forEach(function(k) { if (norm[k]) DB[k] = norm[k]; });
+    if (data.OilConfig) applyRemoteOilConfig(data.OilConfig);
+    renderDashboard(); renderMachines(); renderCars(); renderBookings(); renderRepairs(); renderAlerts();
     if (!silent) toast('ซิงค์ข้อมูลสำเร็จ ✓', 'success');
-  } catch(e) {
+  }).catch(function(e) {
     if (!silent) toast('ไม่สามารถเชื่อมต่อได้: ' + e.message, 'error');
-    else console.warn('Auto-sync failed:', e.message);
-  }
-  btn.classList.remove('syncing'); btn.innerHTML = '🔄 Sync';
+  }).finally(function() {
+    btn.classList.remove('syncing'); btn.innerHTML = '🔄 Sync';
+  });
 }
 
-async function testConnection() {
+function testConnection() {
   GAS_URL = document.getElementById('gasUrl').value.trim();
   localStorage.setItem('gas_url', GAS_URL);
   document.getElementById('connStatus').innerHTML = '<span style="color:#F57F17">⏳ กำลังทดสอบ...</span>';
-  try {
-    const d = await apiGet({ action: 'getAll' });
+  apiGet({ action:'getAll' }).then(function(d) {
     if (d.error) throw new Error(d.error);
-    document.getElementById('connStatus').innerHTML = '<span style="color:var(--success)">✅ เชื่อมต่อสำเร็จ! พบข้อมูล ' + (d.Machines?.length||0) + ' เครื่องจักร</span>';
-    const norm = normalizeDB(d);
-    Object.keys(DB).forEach(k => { if (norm[k]) DB[k] = norm[k]; });
+    document.getElementById('connStatus').innerHTML = '<span style="color:var(--success)">✅ เชื่อมต่อสำเร็จ! พบข้อมูล ' + (d.Machines ? d.Machines.length : 0) + ' เครื่องจักร</span>';
+    var norm = normalizeDB(d);
+    Object.keys(DB).forEach(function(k) { if (norm[k]) DB[k] = norm[k]; });
+    if (d.OilConfig) applyRemoteOilConfig(d.OilConfig);
     renderDashboard(); renderMachines(); renderCars(); renderBookings(); renderRepairs(); renderAlerts();
-  } catch(e) {
+  }).catch(function(e) {
     document.getElementById('connStatus').innerHTML = '<span style="color:var(--danger)">❌ ' + e.message + '</span>';
-  }
+  });
 }
 
-async function initRemoteSheets() {
-  try {
-    const r = await apiPost({ action: 'init' });
-    if (r.success) { toast('สร้าง Sheets สำเร็จ!', 'success'); await syncData(); }
+function initRemoteSheets() {
+  apiPost({ action:'init' }).then(function(r) {
+    if (r.success) { toast('สร้าง Sheets สำเร็จ!', 'success'); syncData(false); }
     else toast(r.error, 'error');
-  } catch(e) { toast(e.message, 'error'); }
+  }).catch(function(e) { toast(e.message, 'error'); });
 }
 
 // ========== MACHINE STATUS ==========
+var PRIO = ['overdue','urgent','soon','ok','unknown'];
+
 function getMachineStatus(machineId) {
-  const sheets = { Engine: DB.Engine||[], Gear: DB.Gear||[], Hydraulic: DB.Hydraulic||[], Grease: DB.Grease||[] };
-  const PRIO = ['overdue','urgent','soon','ok','unknown'];
-  let worstStatus = 'unknown';
-  let worstDays = null;
-  const detail = {};
+  var worstStatus = 'unknown';
+  var worstDays   = null;
+  var detail      = {};
 
-  Object.entries(sheets).forEach(([type, rows]) => {
-    const recs = rows.filter(r => String(r.machineId) === String(machineId));
+  Object.keys(OIL_CONFIG).forEach(function(type) {
+    var rows  = (DB[type] || []).filter(function(r) { return String(r.machineId) === String(machineId); });
+    var subs  = getSubTypes(machineId, type);
+    var dataSubs = rows.map(function(r) { return r.subType; }).filter(Boolean);
+    var allSubs  = subs.length > 0 ? Array.from(new Set(subs.concat(dataSubs))) : [];
 
-    if (OIL_CONFIG[type].subTypes.length > 0 || type === 'Gear' || type === 'Hydraulic' || type === 'Grease') {
-      // group by subType from actual data + configured subtypes
-      const allSubs = [...new Set([...getSubTypes(machineId, type), ...recs.map(r => r.subType).filter(Boolean)])];
-      if (allSubs.length === 0 && recs.length === 0) {
-        detail[type] = [{ subType: null, days: null, status: 'unknown', latest: null }];
-        return;
-      }
-      if (allSubs.length > 0) {
-        detail[type] = allSubs.map(st => {
-          const arr = recs.filter(r => r.subType === st);
-          const latest = arr.sort((a,b) => (b.changeDate||'').localeCompare(a.changeDate||''))[0] || null;
-          const days = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
-          const status = statusOf(days);
-          if (PRIO.indexOf(status) < PRIO.indexOf(worstStatus)) { worstStatus = status; worstDays = days; }
-          return { subType: st, days, status, latest };
-        });
-      } else {
-        const latest = recs.sort((a,b) => (b.changeDate||'').localeCompare(a.changeDate||''))[0] || null;
-        const days = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
-        const status = statusOf(days);
+    if (allSubs.length > 0) {
+      detail[type] = allSubs.map(function(st) {
+        var arr    = rows.filter(function(r) { return r.subType === st; });
+        var latest = arr.sort(function(a,b) { return (b.changeDate||'').localeCompare(a.changeDate||''); })[0] || null;
+        var days   = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
+        var status = statusOf(days);
         if (PRIO.indexOf(status) < PRIO.indexOf(worstStatus)) { worstStatus = status; worstDays = days; }
-        detail[type] = [{ subType: null, days, status, latest }];
-      }
+        return { subType:st, days:days, status:status, latest:latest };
+      });
     } else {
-      const latest = recs.sort((a,b) => (b.changeDate||'').localeCompare(a.changeDate||''))[0] || null;
-      const days = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
-      const status = statusOf(days);
+      var latest = rows.sort(function(a,b) { return (b.changeDate||'').localeCompare(a.changeDate||''); })[0] || null;
+      var days   = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
+      var status = statusOf(days);
       if (PRIO.indexOf(status) < PRIO.indexOf(worstStatus)) { worstStatus = status; worstDays = days; }
-      detail[type] = [{ subType: null, days, status, latest }];
+      detail[type] = [{ subType:null, days:days, status:status, latest:latest }];
     }
   });
-  return { worstStatus, worstDays, detail };
+  return { worstStatus:worstStatus, worstDays:worstDays, detail:detail };
 }
 
 // ========== DASHBOARD ==========
 function renderDashboard() {
-  const counts = { overdue:0, urgent:0, soon:0, ok:0, unknown:0 };
-  DB.Machines.forEach(m => { counts[getMachineStatus(m.id).worstStatus]++; });
-  document.getElementById('s-total').textContent = DB.Machines.length;
-  document.getElementById('s-over').textContent = counts.overdue;
-  document.getElementById('s-urgent').textContent = counts.urgent;
-  document.getElementById('s-soon').textContent = counts.soon;
-  document.getElementById('s-ok').textContent = counts.ok;
-  const openRepairs = DB.Repairs.filter(r => r.status !== 'เสร็จแล้ว').length;
-  document.getElementById('s-repairs').textContent = openRepairs;
+  var counts = { overdue:0, urgent:0, soon:0, ok:0, unknown:0 };
+  DB.Machines.forEach(function(m) {
+    var s = getMachineStatus(m.id).worstStatus;
+    counts[s] = (counts[s] || 0) + 1;
+  });
+  document.getElementById('s-total').textContent   = DB.Machines.length;
+  document.getElementById('s-over').textContent    = counts.overdue;
+  document.getElementById('s-urgent').textContent  = counts.urgent;
+  document.getElementById('s-soon').textContent    = counts.soon;
+  document.getElementById('s-ok').textContent      = counts.ok;
+  document.getElementById('s-repairs').textContent = (DB.Repairs || []).filter(function(r) { return r.status !== 'เสร็จแล้ว'; }).length;
 
-  const alertMachines = DB.Machines.filter(m => ['overdue','urgent','soon'].includes(getMachineStatus(m.id).worstStatus)).slice(0,8);
-  const badge2 = document.getElementById('alertBadge');
-  const total = counts.overdue + counts.urgent + counts.soon;
-  if (total > 0) { badge2.style.display=''; badge2.textContent = '🔔 ' + total; } else badge2.style.display='none';
+  var alertMs = DB.Machines.filter(function(m) {
+    return ['overdue','urgent','soon'].indexOf(getMachineStatus(m.id).worstStatus) !== -1;
+  }).slice(0, 8);
+  var total = counts.overdue + counts.urgent + counts.soon;
+  var badge2 = document.getElementById('alertBadge');
+  if (total > 0) { badge2.style.display = ''; badge2.textContent = '🔔 ' + total; }
+  else badge2.style.display = 'none';
 
-  document.getElementById('dashAlerts').innerHTML = alertMachines.length ? `
-    <div class="alert-banner">
-      <h3>🚨 ต้องดำเนินการ (${alertMachines.length} เครื่อง)</h3>
-      ${alertMachines.map(m => {
-        const {worstStatus, worstDays} = getMachineStatus(m.id);
-        return `<div class="alert-row">
-          <span><strong>${m.name}</strong> — ${m.location||'—'}</span>
-          ${badge(worstStatus)} ${worstDays!==null?(worstDays<0?`<small style="color:var(--danger)">${Math.abs(worstDays)} วันที่ผ่านมา</small>`:`<small>อีก ${worstDays} วัน</small>`):''}
-        </div>`;
-      }).join('')}
-    </div>` : '';
+  document.getElementById('dashAlerts').innerHTML = alertMs.length ? '<div class="alert-banner"><h3>🚨 ต้องดำเนินการ (' + alertMs.length + ' เครื่อง)</h3>' +
+    alertMs.map(function(m) {
+      var ms = getMachineStatus(m.id);
+      var dayTxt = ms.worstDays !== null ? (ms.worstDays < 0 ? '<small style="color:var(--danger)">' + Math.abs(ms.worstDays) + ' วันที่ผ่านมา</small>' : '<small>อีก ' + ms.worstDays + ' วัน</small>') : '';
+      return '<div class="alert-row"><span><strong>' + m.name + '</strong> — ' + (m.location||'—') + '</span>' + badge(ms.worstStatus) + ' ' + dayTxt + '</div>';
+    }).join('') + '</div>' : '';
 
-  const upcoming = (DB.Bookings||[]).filter(b => b.status !== 'เสร็จแล้ว').sort((a,b) => (a.bookDate||'').localeCompare(b.bookDate||'')).slice(0,5);
-  document.getElementById('dashBookings').innerHTML = upcoming.length ? upcoming.map(b =>
-    `<div class="alert-row"><span><strong>${b.machineName||'—'}</strong> — ${b.oilType||''}${b.subType?' ('+b.subType+')':''}</span><span style="color:var(--primary)">${formatThaiDate(b.bookDate)} &nbsp;${badge('pending', b.status||'รอดำเนินการ')}</span></div>`
-  ).join('') : '<div style="color:#90A4AE;font-size:13px">ไม่มีการจองคิว</div>';
+  var upcoming = (DB.Bookings || []).filter(function(b) { return b.status !== 'เสร็จแล้ว'; }).sort(function(a,b) { return (a.bookDate||'').localeCompare(b.bookDate||''); }).slice(0, 5);
+  document.getElementById('dashBookings').innerHTML = upcoming.length ?
+    upcoming.map(function(b) {
+      return '<div class="alert-row"><span><strong>' + (b.machineName||'—') + '</strong> — ' + (b.oilType||'') + (b.subType ? ' ('+b.subType+')' : '') + '</span><span style="color:var(--primary)">' + formatThaiDate(b.bookDate) + ' &nbsp;' + badge('pending', b.status||'รอดำเนินการ') + '</span></div>';
+    }).join('') : '<div style="color:#90A4AE;font-size:13px">ไม่มีการจองคิว</div>';
 }
 
 // ========== MACHINES ==========
-let expandedMachine = null;
 function renderMachines() {
-  const search = (document.getElementById('machineSearch').value || '').toLowerCase();
-  const typeF = document.getElementById('machineTypeFilter').value;
-  const grid = document.getElementById('machineGrid');
-
-  let machines = DB.Machines.filter(m => {
-    if (search && !(`${m.name} ${m.location} ${m.serialNo}`).toLowerCase().includes(search)) return false;
+  var search = (document.getElementById('machineSearch').value || '').toLowerCase();
+  var typeF  = document.getElementById('machineTypeFilter').value;
+  var machines = DB.Machines.filter(function(m) {
+    if (search && !(m.name + ' ' + (m.location||'') + ' ' + (m.serialNo||'')).toLowerCase().includes(search)) return false;
     if (typeF && m.machineType !== typeF) return false;
-    if (activeStatusFilter) {
-      const { worstStatus } = getMachineStatus(m.id);
-      if (worstStatus !== activeStatusFilter) return false;
-    }
+    if (activeStatusFilter && getMachineStatus(m.id).worstStatus !== activeStatusFilter) return false;
     return true;
   });
   document.getElementById('machineCount').textContent = machines.length;
 
-  grid.innerHTML = machines.map(m => {
-    const { worstStatus, detail } = getMachineStatus(m.id);
-    const expanded = expandedMachine === m.id;
-    const chipHtml = Object.entries(OIL_CONFIG).map(([type, cfg]) => {
-      const items = detail[type] || [];
-      const PRIO = ['overdue','urgent','soon','ok','unknown'];
-      const worst = items.length
-        ? items.reduce((a,b) => PRIO.indexOf(a.status) <= PRIO.indexOf(b.status) ? a : b)
-        : { status:'unknown', days:null };
-      const d = (worst.days !== undefined && worst.days !== null) ? worst.days : null;
-      return `<span class="badge badge-${worst.status}" title="${cfg.label}">${cfg.icon} ${cfg.label}</span>`;
+  document.getElementById('machineGrid').innerHTML = machines.map(function(m) {
+    var ms = getMachineStatus(m.id);
+    var chipHtml = Object.keys(OIL_CONFIG).map(function(type) {
+      var cfg   = OIL_CONFIG[type];
+      var items = ms.detail[type] || [];
+      var worst = items.length ? items.reduce(function(a,b) { return PRIO.indexOf(a.status) <= PRIO.indexOf(b.status) ? a : b; }) : { status:'unknown', days:null };
+      var d     = (worst.days !== undefined && worst.days !== null) ? worst.days : null;
+      var dayTxt = d === null ? '' : (d < 0 ? ' ' + Math.abs(d) + 'วผ' : ' ' + d + 'ว');
+      return '<span class="badge badge-' + worst.status + '" title="' + cfg.label + '">' + cfg.icon + ' ' + cfg.label + dayTxt + '</span>';
     }).join('');
 
-    const detailHtml = expanded ? `<div class="detail-panel">${renderMachineDetail(m)}</div>` : '';
-    return `<div class="card machine-card status-${worstStatus}" id="mc-${m.id}" onclick="toggleMachine('${m.id}')">
-      <div class="card-body" style="padding:14px">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div class="machine-name">${m.name}</div>
-          ${badge(worstStatus)}
-        </div>
-        <div class="machine-info">📍 ${m.location||'—'} &nbsp;|&nbsp; ${m.machineType||''} &nbsp;|&nbsp; ${m.serialNo||'—'}</div>
-        <div class="oil-chips">${chipHtml}</div>
-        ${m.driver ? `<div style="margin-top:6px;font-size:12px;color:#78909C">👤 ${m.driver}</div>` : ''}
-      </div>
-      ${detailHtml}
-    </div>`;
+    var expanded = expandedMachine === m.id;
+    var detailHtml = expanded ? '<div class="detail-panel">' + renderMachineDetail(m) + '</div>' : '';
+
+    return '<div class="card machine-card status-' + ms.worstStatus + '" id="mc-' + m.id + '" onclick="toggleMachine(\'' + m.id + '\')">' +
+      '<div class="card-body" style="padding:14px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+          '<div class="machine-name">' + m.name + '</div>' + badge(ms.worstStatus) +
+        '</div>' +
+        '<div class="machine-info">📍 ' + (m.location||'—') + ' &nbsp;|&nbsp; ' + (m.machineType||'') + ' &nbsp;|&nbsp; ' + (m.serialNo||'—') + '</div>' +
+        '<div class="oil-chips">' + chipHtml + '</div>' +
+        (m.driver ? '<div style="margin-top:6px;font-size:12px;color:#78909C">👤 ' + m.driver + '</div>' : '') +
+      '</div>' + detailHtml + '</div>';
   }).join('');
 }
 
 function toggleMachine(id) {
-  expandedMachine = expandedMachine === id ? null : id;
+  expandedMachine = (expandedMachine === id) ? null : id;
   renderMachines();
 }
 
 function renderMachineDetail(m) {
-  return `
-    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" onclick="event.stopPropagation()">
-      <button class="btn btn-sm btn-warning" onclick="openMachineModal('${m.id}')">✏️ แก้ไขข้อมูล</button>
-      <button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="openRepairModal('${m.id}')">🔧 บันทึกซ่อม</button>
-      <button class="btn btn-sm btn-outline" onclick="openBookingModal('${m.id}')">📅 จองคิว</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteMachine('${m.id}')">🗑</button>
-    </div>
-    ${Object.entries(OIL_CONFIG).map(([type, cfg]) => renderOilSection(m, type, cfg)).join('')}
-    ${renderRepairSection(m.id)}
-  `;
+  var html = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" onclick="event.stopPropagation()">' +
+    '<button class="btn btn-sm btn-warning" onclick="openMachineModal(\'' + m.id + '\')">✏️ แก้ไขข้อมูล</button>' +
+    '<button class="btn btn-sm" style="background:var(--purple);color:#fff" onclick="openRepairModal(\'' + m.id + '\')">🔧 บันทึกซ่อม</button>' +
+    '<button class="btn btn-sm btn-outline" onclick="openBookingModal(\'' + m.id + '\',\'\',\'\')">📅 จองคิว</button>' +
+    '<button class="btn btn-sm btn-danger" onclick="deleteMachine(\'' + m.id + '\')">🗑</button>' +
+  '</div>';
+
+  Object.keys(OIL_CONFIG).forEach(function(type) {
+    html += renderOilSection(m, type, OIL_CONFIG[type]);
+  });
+  html += renderRepairSection(m.id);
+  return html;
 }
 
 function renderOilSection(m, type, cfg) {
-  const mId   = m.id;
-  const mName = m.name.replace(/'/g,"\\'");
-  const rows   = (DB[type]||[]).filter(r => String(r.machineId) === String(mId));
-  const baseSubs   = cfg.subTypes;
-  const allSubTypes = getSubTypes(mId, type);
-  const dataSubTypes = [...new Set(rows.map(r => r.subType).filter(Boolean))];
-  // Engine มี subType = null (ไม่มี sub), type อื่นใช้ list
-  const useSubTypes = allSubTypes.length > 0;
-  const merged = useSubTypes
-    ? [...new Set([...allSubTypes, ...dataSubTypes])]
-    : [null];
+  var mId   = m.id;
+  var mName = m.name.replace(/'/g, "\\'");
+  var rows  = (DB[type] || []).filter(function(r) { return String(r.machineId) === String(mId); });
+  var subs  = getSubTypes(mId, type);
+  var dataSubs = Array.from(new Set(rows.map(function(r) { return r.subType; }).filter(Boolean)));
+  var merged   = subs.length > 0 ? Array.from(new Set(subs.concat(dataSubs))) : [null];
 
-  const subHtml = merged.map(st => {
-    const stEsc = (st||'').replace(/'/g,"\\'");
-    const stRows = st ? rows.filter(r => r.subType === st) : rows;
-    const stRowsSorted = [...stRows].sort((a,b) => (b.changeDate||'').localeCompare(a.changeDate||''));
-    const latest = stRowsSorted[0] || null;
-    const days = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
-    const status = statusOf(days);
-    const clr = status==='ok'?'success':status==='soon'?'warning':status==='urgent'?'orange':'danger';
-    const daysText = days === null ? '—'
-      : days < 0 ? `<span style="color:var(--danger);font-weight:700">เลย ${Math.abs(days)} วัน</span>`
-      : `<span style="color:var(--${clr});font-weight:700">อีก ${days} วัน</span>`;
+  var subHtml = merged.map(function(st) {
+    var stEsc    = (st || '').replace(/'/g, "\\'");
+    var stRows   = st ? rows.filter(function(r) { return r.subType === st; }) : rows;
+    var sorted   = stRows.slice().sort(function(a,b) { return (b.changeDate||'').localeCompare(a.changeDate||''); });
+    var latest   = sorted[0] || null;
+    var days     = (latest && latest.nextDate) ? daysUntil(latest.nextDate) : null;
+    var status   = statusOf(days);
+    var clr      = status==='ok' ? 'success' : status==='soon' ? 'warning' : 'orange';
+    var daysText = days === null ? '—' : days < 0 ?
+      '<span style="color:var(--danger);font-weight:700">เลย ' + Math.abs(days) + ' วัน</span>' :
+      '<span style="color:var(--' + clr + ');font-weight:700">อีก ' + days + ' วัน</span>';
+    var savedRate = getSavedRate(mId, type, st);
+    var rateChip  = savedRate ? '<span style="font-size:11px;color:#78909C;background:#ECEFF1;padding:2px 8px;border-radius:10px">⏱ ' + savedRate + ' ชม./วัน</span>' : '';
+    var canDel    = !!st;
+    var isBase    = st ? isBaseSubType(type, st) : false;
+    var delBtn    = canDel ? '<button class="btn btn-sm" style="background:#FFEBEE;color:var(--danger);padding:3px 8px;font-size:11px" title="' + (isBase ? 'ลบออก (กู้คืนได้)' : 'ลบออก') + '" onclick="event.stopPropagation();deleteSubType(\'' + mId + '\',\'' + mName + '\',\'' + type + '\',\'' + stEsc + '\')">🗑 ลบ</button>' : '';
 
-    const savedRate = getSavedRate(mId, type, st);
-    const rateChip  = savedRate ? `<span style="font-size:11px;color:#78909C;background:#ECEFF1;padding:2px 8px;border-radius:10px">⏱ ${savedRate} ชม./วัน</span>` : '';
+    var histHtml = sorted.slice(1,5).map(function(r) {
+      return '<div class="history-row"><span>' + formatThaiDate(r.changeDate) + '</span><span>' + (r.currentHours!=null ? numFmt(r.currentHours)+' ชม.' : '—') + '</span><span>→ ' + formatThaiDate(r.nextDate) + '</span><button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px" onclick="event.stopPropagation();deleteRecord(\'' + type + '\',\'' + r.id + '\')">✕</button></div>';
+    }).join('');
 
-    const historyHtml = stRowsSorted.slice(1,5).map(r => `
-      <div class="history-row">
-        <span>${formatThaiDate(r.changeDate)}</span>
-        <span>${r.currentHours!=null?numFmt(r.currentHours)+' ชม.':'—'}</span>
-        <span>→ ${formatThaiDate(r.nextDate)}</span>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-sm btn-warning" style="padding:2px 6px;font-size:11px"
-            onclick="event.stopPropagation();openEditOilModal('${type}','${r.id}')">✏️</button>
-          <button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px"
-            onclick="event.stopPropagation();deleteRecord('${type}','${r.id}')">✕</button>
-        </div>
-      </div>`).join('');
+    var latestHtml = latest ?
+      '<div style="font-size:12px;color:#546E7A;margin-top:6px;line-height:1.8">เปลี่ยนล่าสุด: <strong>' + formatThaiDate(latest.changeDate) + '</strong>' +
+      (latest.currentHours!=null ? ' &nbsp;|&nbsp; ชม. <strong>' + numFmt(latest.currentHours) + '</strong>' : '') +
+      ' &nbsp;|&nbsp; ครั้งถัดไป: <strong>' + formatThaiDate(latest.nextDate) + '</strong> (' + daysText + ')' +
+      (latest.oilBrand ? '<br>🛢 ' + latest.oilBrand + (latest.oilGrade ? ' '+latest.oilGrade : '') : '') +
+      (latest.liters ? ' &nbsp;|&nbsp; ' + latest.liters + ' ล.' : '') +
+      (latest.technicianName ? ' &nbsp;|&nbsp; ช่าง: <strong>' + latest.technicianName + '</strong>' : '') +
+      (latest.note ? '<br><em style="color:#90A4AE">📝 ' + latest.note + '</em>' : '') + '</div>' +
+      (sorted.length > 1 ? '<details style="margin-top:6px"><summary style="font-size:11px;color:#90A4AE;cursor:pointer">📋 ประวัติ (' + (sorted.length-1) + ' รายการ)</summary><div style="margin-top:4px">' + histHtml + '</div></details>' : '')
+      : '<div style="font-size:12px;color:#90A4AE;margin-top:4px">ยังไม่มีข้อมูล — กด <strong>+ บันทึก</strong> เพื่อเริ่มต้น</div>';
 
-    // ปุ่มลบ subtype — ลบได้ทุกประเภท ทั้ง base และ custom
-    const canDelSub = !!st;
-    const isBase = st && isBaseSubType(type, st);
-    const delSubBtn = canDelSub
-      ? `<button class="btn btn-sm" style="background:#FFEBEE;color:var(--danger);padding:3px 8px;font-size:11px"
-           title="${isBase ? 'ลบออกจากรายการ (base — กู้คืนได้ด้วยการเพิ่มชื่อเดิมกลับ)' : 'ลบออกจากรายการ'}"
-           onclick="event.stopPropagation();deleteSubType('${mId}','${mName}','${type}','${stEsc}')">🗑 ลบ</button>`
-      : '';
-
-    return `<div class="oil-sub-item">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <strong style="font-size:13px">${st ? '📌 '+st : cfg.label}</strong>
-          ${rateChip}
-          ${badge(status)}
-        </div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap">
-          <button class="btn btn-sm btn-primary"
-            onclick="event.stopPropagation();openOilModal('${mId}','${mName}','${type}','${stEsc}')">+ บันทึก</button>
-          <button class="btn btn-sm" style="background:var(--teal);color:#fff;padding:5px 10px"
-            onclick="event.stopPropagation();openBookingModal('${mId}','${type}','${stEsc}')">📅 จอง</button>
-          ${delSubBtn}
-        </div>
-      </div>
-      ${latest ? `
-        <div style="font-size:12px;color:#546E7A;margin-top:6px;line-height:1.8">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-            <div>
-              เปลี่ยนล่าสุด: <strong>${formatThaiDate(latest.changeDate)}</strong>
-              ${latest.currentHours!=null ? `&nbsp;|&nbsp; ชม. <strong>${numFmt(latest.currentHours)}</strong>` : ''}
-              &nbsp;|&nbsp; ครั้งถัดไป: <strong>${formatThaiDate(latest.nextDate)}</strong> (${daysText})
-              ${latest.oilBrand ? `<br>🛢 ${latest.oilBrand}${latest.oilGrade?' '+latest.oilGrade:''}` : ''}
-              ${latest.liters ? `&nbsp;|&nbsp; ${latest.liters} ล.` : ''}
-              ${latest.technicianName ? `&nbsp;|&nbsp; ช่าง: <strong>${latest.technicianName}</strong>` : ''}
-              ${latest.note ? `<br><em style="color:#90A4AE">📝 ${latest.note}</em>` : ''}
-            </div>
-            <button class="btn btn-sm btn-warning" style="white-space:nowrap;flex-shrink:0"
-              onclick="event.stopPropagation();openEditOilModal('${type}','${latest.id}')">✏️ แก้ไข</button>
-          </div>
-        </div>
-        ${stRowsSorted.length > 1
-          ? `<details style="margin-top:6px">
-               <summary style="font-size:11px;color:#90A4AE;cursor:pointer">📋 ประวัติ (${stRowsSorted.length-1} รายการ)</summary>
-               <div style="margin-top:4px">${historyHtml}</div>
-             </details>`
-          : ''}
-      ` : '<div style="font-size:12px;color:#90A4AE;margin-top:4px">ยังไม่มีข้อมูล — กด <strong>+ บันทึก</strong> เพื่อเริ่มต้น</div>'}
-    </div>`;
+    return '<div class="oil-sub-item">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<strong style="font-size:13px">' + (st ? '📌 '+st : cfg.label) + '</strong>' + rateChip + badge(status) +
+        '</div>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+          '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openOilModal(\'' + mId + '\',\'' + mName + '\',\'' + type + '\',\'' + stEsc + '\')">+ บันทึก</button>' +
+          '<button class="btn btn-sm" style="background:var(--teal);color:#fff;padding:5px 10px" onclick="event.stopPropagation();openBookingModal(\'' + mId + '\',\'' + type + '\',\'' + stEsc + '\')">📅 จอง</button>' +
+          delBtn +
+        '</div>' +
+      '</div>' + latestHtml + '</div>';
   }).join('');
 
-  // ปุ่มเพิ่ม subtype ทุก type
-  const addSubBtn = `<button class="btn btn-sm" style="background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;padding:5px 12px"
-    onclick="event.stopPropagation();addSubTypeInline('${mId}','${mName}','${type}')">＋ เพิ่มประเภทย่อย</button>`;
+  var addSubBtn = '<button class="btn btn-sm" style="background:#E8F5E9;color:var(--success);border:1px solid #A5D6A7;padding:5px 12px" onclick="event.stopPropagation();addSubTypeInline(\'' + mId + '\',\'' + mName + '\',\'' + type + '\')">＋ เพิ่มประเภทย่อย</button>';
 
-  return `<div class="oil-section" onclick="event.stopPropagation()">
-    <div class="oil-section-hdr">
-      <span style="font-weight:700;font-size:14px">${cfg.icon} ${cfg.label}</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        ${addSubBtn}
-        ${!useSubTypes
-          ? `<button class="btn btn-sm btn-primary"
-               onclick="event.stopPropagation();openOilModal('${mId}','${mName}','${type}','')">+ บันทึก</button>`
-          : ''}
-      </div>
-    </div>
-    <div class="oil-section-body">${subHtml}</div>
-  </div>`;
+  return '<div class="oil-section" onclick="event.stopPropagation()">' +
+    '<div class="oil-section-hdr"><span style="font-weight:700;font-size:14px">' + cfg.icon + ' ' + cfg.label + '</span>' +
+    '<div style="display:flex;gap:6px;align-items:center">' + addSubBtn +
+      (subs.length === 0 ? '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation();openOilModal(\'' + mId + '\',\'' + mName + '\',\'' + type + '\',\'\')">+ บันทึก</button>' : '') +
+    '</div></div>' +
+    '<div class="oil-section-body">' + subHtml + '</div></div>';
 }
 
 function addSubTypeInline(machineId, machineName, type) {
-  const name = prompt(`➕ เพิ่มประเภทย่อย\n${OIL_CONFIG[type].icon} ${OIL_CONFIG[type].label} — ${machineName.replace(/\\'/g,"'")}\n\nพิมพ์ชื่อประเภทย่อยใหม่:`);
+  event.stopPropagation && event.stopPropagation();
+  var name = prompt('➕ เพิ่มประเภทย่อย\n' + OIL_CONFIG[type].icon + ' ' + OIL_CONFIG[type].label + ' — ' + machineName.replace(/\\'/g,"'") + '\n\nพิมพ์ชื่อประเภทย่อยใหม่:');
   if (!name || !name.trim()) return;
   addCustomSub(machineId, type, name.trim());
-  toast(`✅ เพิ่ม "${name.trim()}" แล้ว`, 'success');
+  toast('✅ เพิ่ม "' + name.trim() + '" แล้ว', 'success');
   expandedMachine = machineId;
   renderMachines();
 }
 
 function deleteSubType(machineId, machineName, type, subType) {
-  const hasData = (DB[type]||[]).some(r => String(r.machineId)===String(machineId) && r.subType===subType);
-  const isBase  = isBaseSubType(type, subType);
-  const baseNote = isBase ? '\n📌 ประเภทนี้เป็น default — ลบแล้วกู้คืนได้ด้วยการกด "＋ เพิ่มประเภทย่อย" ชื่อเดิม' : '';
-  const dataNote = hasData ? '\n⚠️ มีข้อมูลบันทึกอยู่ — ลบประเภทจะไม่ลบข้อมูลเดิม' : '';
-  if (!confirm(`🗑 ลบประเภทย่อย "${subType}" ออกจากรายการ?\nเครื่อง: ${machineName.replace(/\\'/g,"'")}${baseNote}${dataNote}`)) return;
+  var hasData = (DB[type] || []).some(function(r) { return String(r.machineId) === String(machineId) && r.subType === subType; });
+  var isBase  = isBaseSubType(type, subType);
+  var msg     = '🗑 ลบประเภทย่อย "' + subType + '" ออกจากรายการ?\nเครื่อง: ' + machineName.replace(/\\'/g,"'") +
+    (isBase ? '\n📌 ประเภทนี้เป็น default — กู้คืนได้ด้วยการกด ＋ เพิ่ม ชื่อเดิม' : '') +
+    (hasData ? '\n⚠️ มีข้อมูลบันทึกอยู่ — ลบประเภทจะไม่ลบข้อมูลเดิม' : '');
+  if (!confirm(msg)) return;
   removeSubType(machineId, type, subType);
-  toast(`ลบ "${subType}" แล้ว`, 'success');
+  toast('ลบ "' + subType + '" แล้ว', 'success');
   expandedMachine = machineId;
   renderMachines();
 }
 
 function renderRepairSection(machineId) {
-  const repairs = (DB.Repairs||[]).filter(r => String(r.machineId) === String(machineId))
-    .sort((a,b) => (b.repairDate||'').localeCompare(a.repairDate||'')).slice(0,3);
+  var repairs = (DB.Repairs || []).filter(function(r) { return String(r.machineId) === String(machineId); })
+    .sort(function(a,b) { return (b.repairDate||'').localeCompare(a.repairDate||''); }).slice(0,3);
   if (!repairs.length) return '';
-  return `<div class="oil-section" onclick="event.stopPropagation()">
-    <div class="oil-section-hdr">
-      <span style="font-weight:700">🔧 ประวัติซ่อมล่าสุด</span>
-      <button class="btn btn-sm" style="background:#EDE7F6;color:var(--purple)" onclick="event.stopPropagation();openRepairModal('${machineId}')">+ บันทึกซ่อม</button>
-    </div>
-    <div class="oil-section-body">${repairs.map(r => `
-      <div class="oil-sub-item">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-          <div>
-            <span style="font-size:12px;font-weight:700;color:#78909C">${formatThaiDate(r.repairDate)}</span>
-            ${r.repairShop||r.technicianName ? `<span style="font-size:12px;color:#90A4AE;margin-left:8px">— ${r.repairShop||''}${r.technicianName?' / '+r.technicianName:''}</span>` : ''}
-          </div>
-          <span class="badge badge-${r.status==='เสร็จแล้ว'?'ok':r.status==='กำลังซ่อม'?'urgent':'open'}">${r.status||'—'}</span>
-        </div>
-        <div style="font-size:13px;color:#37474F;margin-top:4px">${r.repairDetail||'—'}</div>
-        ${r.note ? `<div style="font-size:12px;color:#90A4AE;margin-top:2px">📝 ${r.note}</div>` : ''}
-      </div>`).join('')}
-    </div>
-  </div>`;
+  return '<div class="oil-section" onclick="event.stopPropagation()">' +
+    '<div class="oil-section-hdr"><span style="font-weight:700">🔧 ประวัติซ่อมล่าสุด</span>' +
+    '<button class="btn btn-sm" style="background:#EDE7F6;color:var(--purple)" onclick="event.stopPropagation();openRepairModal(\'' + machineId + '\')">+ บันทึกซ่อม</button></div>' +
+    '<div class="oil-section-body">' +
+    repairs.map(function(r) {
+      return '<div class="oil-sub-item">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+          '<div><span style="font-size:12px;font-weight:700;color:#78909C">' + formatThaiDate(r.repairDate) + '</span>' +
+          (r.repairShop||r.technicianName ? '<span style="font-size:12px;color:#90A4AE;margin-left:8px">— ' + (r.repairShop||'') + (r.technicianName ? ' / '+r.technicianName : '') + '</span>' : '') + '</div>' +
+          '<span class="badge badge-' + (r.status==='เสร็จแล้ว' ? 'ok' : r.status==='กำลังซ่อม' ? 'urgent' : 'open') + '">' + (r.status||'—') + '</span>' +
+        '</div>' +
+        '<div style="font-size:13px;color:#37474F;margin-top:4px">' + (r.repairDetail||'—') + '</div>' +
+        (r.note ? '<div style="font-size:12px;color:#90A4AE;margin-top:2px">📝 ' + r.note + '</div>' : '') +
+      '</div>';
+    }).join('') + '</div></div>';
 }
 
 // ========== OIL MODAL ==========
-let currentOilCtx = {};
-
-// flag ป้องกัน loop ระหว่าง manual edit กับ auto-calc
-let _calcLock = false;
+var currentOilCtx = {};
 
 function calcNextDate() {
-  if (_calcLock) return;
-  const cur      = parseFloat(document.getElementById('o-curhours').value);
-  const interval = parseFloat(document.getElementById('o-interval').value);
-  const rate     = parseFloat(document.getElementById('o-rate').value);
-  const dateStr  = document.getElementById('o-date').value;
+  var cur  = parseFloat(document.getElementById('o-curhours').value);
+  var rate = parseFloat(document.getElementById('o-rate').value);
+  var dateStr  = document.getElementById('o-date').value;
+  var cfg  = currentOilCtx.type ? OIL_CONFIG[currentOilCtx.type] : null;
+  if (!cfg) return;
 
-  // คำนวณ nextHours = cur + interval — อัปเดตเฉพาะเมื่อทั้งคู่มีค่า
-  const nextHoursEl = document.getElementById('o-nexthours');
-  const nextDateEl  = document.getElementById('o-nextdate');
-  const nextHrsLabel = document.getElementById('nextHoursCalcLabel');
-  const nextDtLabel  = document.getElementById('nextDateCalcLabel');
+  var nextHoursEl = document.getElementById('o-nexthours');
+  var nextHours   = parseFloat(nextHoursEl.value);
+  if (!nextHours && !isNaN(cur)) { nextHours = cur + cfg.interval; nextHoursEl.value = nextHours; }
 
-  let nextHours = null;
-  if (!isNaN(cur) && !isNaN(interval) && interval > 0) {
-    nextHours = cur + interval;
-    _calcLock = true;
-    nextHoursEl.value = nextHours;
-    _calcLock = false;
-    if (nextHrsLabel) nextHrsLabel.textContent = '(คำนวณอัตโนมัติ)';
-  } else {
-    if (nextHrsLabel) nextHrsLabel.textContent = '';
-  }
-
-  // คำนวณ nextDate จาก rate
-  if (nextHours !== null && !isNaN(rate) && rate > 0 && dateStr) {
-    const daysLeft = Math.round(interval / rate);
-    const baseDate = thaiToDate(dateStr);
-    if (baseDate) {
-      baseDate.setDate(baseDate.getDate() + daysLeft);
-      // baseDate.getFullYear() คืน ค.ศ. แล้ว — บวก 543 เพื่อแสดงเป็น พ.ศ.
-      const ceYear = baseDate.getFullYear();
-      const bsYear = ceYear + 543;
-      const mo = String(baseDate.getMonth()+1).padStart(2,'0');
-      const d  = String(baseDate.getDate()).padStart(2,'0');
-      const calcDateStr = `${bsYear}-${mo}-${d}`;
-      _calcLock = true;
-      nextDateEl.value = calcDateStr;
-      _calcLock = false;
-      if (nextDtLabel) nextDtLabel.textContent = `≈ อีก ${daysLeft} วัน`;
+  var label = document.getElementById('nextDateCalcLabel');
+  if (!isNaN(cur) && !isNaN(rate) && rate > 0 && !isNaN(nextHours) && dateStr) {
+    var hrsLeft  = nextHours - cur;
+    var daysLeft = Math.round(hrsLeft / rate);
+    var base = parseAnyDate(dateStr);
+    if (base) {
+      base.setDate(base.getDate() + daysLeft);
+      var y  = base.getFullYear() + 543;
+      var mo = String(base.getMonth()+1).padStart(2,'0');
+      var d  = String(base.getDate()).padStart(2,'0');
+      document.getElementById('o-nextdate').value = y + '-' + mo + '-' + d;
+      label.textContent = '≈ ' + daysLeft + ' วันข้างหน้า';
+      return;
     }
-  } else {
-    if (nextDtLabel) nextDtLabel.textContent = '';
   }
-}
-
-// ผู้ใช้แก้ไข nextHours เอง — เคลียร์ label auto-calc
-function onNextHoursManual() {
-  const el = document.getElementById('nextHoursCalcLabel');
-  if (el) el.textContent = '(แก้ไขเอง)';
-}
-// ผู้ใช้แก้ไข nextDate เอง — เคลียร์ label auto-calc
-function onNextDateManual() {
-  const el = document.getElementById('nextDateCalcLabel');
-  if (el) el.textContent = '(แก้ไขเอง)';
+  label.textContent = '';
 }
 
 function oilModalAddSub() {
-  const { machineId, machineName, type } = currentOilCtx;
-  const name = prompt(`➕ เพิ่มประเภทย่อย\n${OIL_CONFIG[type].icon} ${OIL_CONFIG[type].label}\n\nพิมพ์ชื่อใหม่:`);
+  var mId  = currentOilCtx.machineId;
+  var type = currentOilCtx.type;
+  var name = prompt('➕ เพิ่มประเภทย่อย\n' + OIL_CONFIG[type].icon + ' ' + OIL_CONFIG[type].label + '\n\nพิมพ์ชื่อใหม่:');
   if (!name || !name.trim()) return;
-  addCustomSub(machineId, type, name.trim());
-  const sel = document.getElementById('o-subtype');
-  const subs = getSubTypes(machineId, type);
-  sel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+  addCustomSub(mId, type, name.trim());
+  var sel  = document.getElementById('o-subtype');
+  var subs = getSubTypes(mId, type);
+  sel.innerHTML = subs.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
   sel.value = name.trim();
-  // trigger rate prefill
   onSubTypeChange();
-  toast(`✅ เพิ่ม "${name.trim()}" แล้ว`, 'success');
+  toast('✅ เพิ่ม "' + name.trim() + '" แล้ว', 'success');
 }
 
 function oilModalDeleteSub() {
-  const { machineId, type } = currentOilCtx;
-  const sel = document.getElementById('o-subtype');
-  const val = sel.value;
+  var mId  = currentOilCtx.machineId;
+  var type = currentOilCtx.type;
+  var sel  = document.getElementById('o-subtype');
+  var val  = sel.value;
   if (!val) return;
-  const isBase = isBaseSubType(type, val);
-  const baseNote = isBase ? '\n📌 ประเภทนี้เป็น default — กู้คืนได้ด้วยการกด "＋ เพิ่ม" ชื่อเดิม' : '';
-  if (!confirm(`🗑 ลบประเภทย่อย "${val}" ออกจากรายการ?${baseNote}`)) return;
-  removeSubType(machineId, type, val);
-  const subs = getSubTypes(machineId, type);
-  sel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+  var isBase = isBaseSubType(type, val);
+  var msg    = '🗑 ลบประเภทย่อย "' + val + '" ออกจากรายการ?' + (isBase ? '\n📌 ประเภทนี้เป็น default — กู้คืนได้ด้วยการกด ＋ เพิ่ม ชื่อเดิม' : '');
+  if (!confirm(msg)) return;
+  removeSubType(mId, type, val);
+  var subs = getSubTypes(mId, type);
+  sel.innerHTML = subs.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
   onSubTypeChange();
-  toast(`ลบ "${val}" แล้ว`, 'success');
+  toast('ลบ "' + val + '" แล้ว', 'success');
 }
 
 function onSubTypeChange() {
-  const { machineId, type } = currentOilCtx;
-  const sel = document.getElementById('o-subtype');
-  const st = sel ? sel.value : '';
-  const rate = getSavedRate(machineId, type, st);
-  const rateEl = document.getElementById('o-rate');
+  var mId  = currentOilCtx.machineId;
+  var type = currentOilCtx.type;
+  var sel  = document.getElementById('o-subtype');
+  var st   = sel ? sel.value : '';
+  var rate = getSavedRate(mId, type, st);
+  var rateEl = document.getElementById('o-rate');
   if (rateEl && rate) rateEl.value = rate;
   calcNextDate();
 }
 
 function openOilModal(machineId, machineName, type, subType) {
-  if (event && event.stopPropagation) event.stopPropagation();
-  currentOilCtx = { machineId, machineName, type, subType: subType||'' };
-  const cfg = OIL_CONFIG[type];
-  document.getElementById('oilModalIcon').textContent = cfg.icon;
-  document.getElementById('oilModalTitle').textContent = 'บันทึก ' + cfg.label;
-  document.getElementById('oilModalMachine').textContent = machineName.replace(/\\'/g,"'");
+  event && event.stopPropagation && event.stopPropagation();
+  currentOilCtx = { machineId:machineId, machineName:machineName, type:type, subType:subType||'' };
+  var cfg = OIL_CONFIG[type];
+  document.getElementById('oilModalIcon').textContent      = cfg.icon;
+  document.getElementById('oilModalTitle').textContent     = 'บันทึก ' + cfg.label;
+  document.getElementById('oilModalMachine').textContent   = machineName.replace(/\\'/g,"'");
   document.getElementById('oilModalTypeLabel').textContent = cfg.label;
   document.getElementById('o-date').value = todayThai();
   document.getElementById('nextDateCalcLabel').textContent = '';
-  ['o-prevhours','o-curhours','o-nexthours','o-nextdate','o-brand','o-grade','o-liters','o-note','o-tech','o-rate','o-interval'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
+  ['o-prevhours','o-curhours','o-nexthours','o-nextdate','o-brand','o-grade','o-liters','o-note','o-tech','o-rate'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
   });
-  // prefill interval จาก OIL_CONFIG
-  const cfgInterval = OIL_CONFIG[type]?.interval;
-  if (cfgInterval) document.getElementById('o-interval').value = cfgInterval;
-  // autoCalcBox removed — using visible input fields now
-  const filterEl = document.getElementById('o-filter');
+  var filterEl = document.getElementById('o-filter');
   if (filterEl) filterEl.value = '';
 
-  const stg  = document.getElementById('subTypeGroup');
-  const stSel = document.getElementById('o-subtype');
-  const subs = getSubTypes(machineId, type);
-  if (subs.length) {
+  var stg   = document.getElementById('subTypeGroup');
+  var stSel = document.getElementById('o-subtype');
+  var subs  = getSubTypes(machineId, type);
+  if (subs.length > 0) {
     stg.style.display = '';
-    stSel.innerHTML = subs.map(s => `<option value="${s}">${s}</option>`).join('');
+    stSel.innerHTML = subs.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
     if (subType) stSel.value = subType;
-    // prefill saved rate for this subtype
-    const rate = getSavedRate(machineId, type, stSel.value);
+    var rate = getSavedRate(machineId, type, stSel.value);
     if (rate) document.getElementById('o-rate').value = rate;
   } else {
     stg.style.display = 'none';
-    // Engine: prefill rate with key = machineId_type_main
-    const rate = getSavedRate(machineId, type, '');
+    var rate = getSavedRate(machineId, type, '');
     if (rate) document.getElementById('o-rate').value = rate;
   }
   document.getElementById('filterGroup').style.display = (type === 'Hydraulic') ? '' : 'none';
   document.getElementById('oilModal').classList.add('open');
 }
 
-async function saveOilRecord() {
-  const { machineId, machineName, type } = currentOilCtx;
-  const cfg = OIL_CONFIG[type];
-  const curHours = document.getElementById('o-curhours').value;
-  const changeDate = document.getElementById('o-date').value;
+function saveOilRecord() {
+  var mId  = currentOilCtx.machineId;
+  var mName = currentOilCtx.machineName;
+  var type = currentOilCtx.type;
+  var cfg  = OIL_CONFIG[type];
+  var changeDate = document.getElementById('o-date').value;
   if (!changeDate) { toast('กรุณาระบุวันที่เปลี่ยน', 'error'); return; }
 
-  const subs = getSubTypes(machineId, type);
-  const stSel = document.getElementById('o-subtype');
-  const subType = subs.length ? stSel.value : null;
+  var subs    = getSubTypes(mId, type);
+  var stSel   = document.getElementById('o-subtype');
+  var subType = subs.length > 0 ? stSel.value : null;
 
-  // บันทึกอัตราการใช้ของเครื่องนี้ / subtype นี้ไว้จำ
-  const rateVal = document.getElementById('o-rate').value;
-  if (rateVal) saveRate(machineId, type, subType, rateVal);
+  var curHours = document.getElementById('o-curhours').value;
+  var rateVal  = document.getElementById('o-rate').value;
+  var nextHoursInput = document.getElementById('o-nexthours').value;
+  var nextHours = nextHoursInput ? +nextHoursInput : (curHours ? +curHours + cfg.interval : null);
+  var nextDate  = document.getElementById('o-nextdate').value || '';
 
-  const intervalVal = parseFloat(document.getElementById('o-interval').value) || cfg.interval;
-  const nextHoursVal = document.getElementById('o-nexthours').value;
-  const nextHours = nextHoursVal ? +nextHoursVal : (curHours ? +curHours + intervalVal : null);
-  const nextDate = document.getElementById('o-nextdate').value || '';
+  if (rateVal) saveRate(mId, type, subType, rateVal);
 
-  const record = {
-    id: uuid(), machineId, machineName, subType,
+  var record = {
+    id: uuid(), machineId: mId, machineName: mName.replace(/\\'/g,"'"), subType: subType,
     prevHours: +document.getElementById('o-prevhours').value || null,
     currentHours: curHours ? +curHours : null,
-    changeDate, nextHours, nextDate,
+    changeDate: changeDate, nextHours: nextHours, nextDate: nextDate,
     oilBrand: document.getElementById('o-brand').value,
     oilGrade: document.getElementById('o-grade').value,
     liters: document.getElementById('o-liters').value || null,
-    filterChanged: document.getElementById('o-filter')?.value || null,
+    filterChanged: (document.getElementById('o-filter') ? document.getElementById('o-filter').value : null) || null,
     technicianName: document.getElementById('o-tech').value,
-    note: document.getElementById('o-note').value,
+    note: document.getElementById('o-note').value
   };
+
   if (!DB[type]) DB[type] = [];
   DB[type].push(record);
   closeModal('oilModal');
-  expandedMachine = machineId;
-  renderMachines();
-  renderDashboard();
+  expandedMachine = mId;
+  renderMachines(); renderDashboard();
 
-  // แจ้งเตือนจองคิวถ้าใกล้ถึงกำหนด (≤14 วัน)
   if (nextDate) {
-    const days = daysUntil(nextDate);
+    var days = daysUntil(nextDate);
     if (days !== null && days <= 14) {
-      const subLabel = subType ? ` (${subType})` : '';
-      const msg = days <= 0
-        ? `⚠️ ${cfg.label}${subLabel} ครั้งถัดไปเลยกำหนดแล้ว!\nวันกำหนด: ${nextDate}\n\nต้องการจองคิวทันทีไหม?`
-        : `🔔 ${cfg.label}${subLabel} ครั้งถัดไปอีก ${days} วัน\nวันกำหนด: ${nextDate}\n\nต้องการจองคิวไหม?`;
-      if (confirm(msg)) openBookingModal(machineId, type, subType||'');
+      var subLabel = subType ? ' (' + subType + ')' : '';
+      var msg = days <= 0 ?
+        '⚠️ ' + cfg.label + subLabel + ' ครั้งถัดไปเลยกำหนดแล้ว!\nวันกำหนด: ' + nextDate + '\n\nต้องการจองคิวทันทีไหม?' :
+        '🔔 ' + cfg.label + subLabel + ' ครั้งถัดไปอีก ' + days + ' วัน\nวันกำหนด: ' + nextDate + '\n\nต้องการจองคิวไหม?';
+      if (confirm(msg)) openBookingModal(mId, type, subType||'');
     }
   }
 
-  try {
-    await apiPost({ action: 'add', sheet: type, data: record });
-    toast('💾 บันทึกสำเร็จ และซิงค์แล้ว ✓', 'success');
-  } catch(e) {
-    toast('⚠️ Offline — ข้อมูลยังไม่ซิงค์ กด 🔄 Sync', 'error');
-  }
+  apiPost({ action:'add', sheet:type, data:record })
+    .then(function() { toast('💾 บันทึกสำเร็จ และซิงค์แล้ว ✓', 'success'); })
+    .catch(function() { toast('⚠️ Offline — ข้อมูลยังไม่ซิงค์ กด 🔄 Sync', 'error'); });
 }
 
 // ========== MACHINE MODAL ==========
-let editMachineId = null;
-function openMachineModal(id = null) {
-  event.stopPropagation && event.stopPropagation();
-  editMachineId = id;
-  const m = id ? DB.Machines.find(x => String(x.id) === String(id)) : null;
+var editMachineId = null;
+
+function openMachineModal(id) {
+  event && event.stopPropagation && event.stopPropagation();
+  editMachineId = id || null;
+  var m = id ? DB.Machines.find(function(x) { return String(x.id) === String(id); }) : null;
   document.getElementById('machineModalTitle').textContent = m ? 'แก้ไขเครื่องจักร' : 'เพิ่มเครื่องจักร';
-  document.getElementById('m-name').value = m?.name || '';
-  document.getElementById('m-location').value = m?.location || '';
-  document.getElementById('m-serial').value = m?.serialNo || '';
-  document.getElementById('m-driver').value = m?.driver || '';
-  document.getElementById('m-note').value = m?.note || '';
-  document.getElementById('m-type').value = m?.machineType || 'Drill Rig';
+  document.getElementById('m-name').value     = m ? (m.name||'') : '';
+  document.getElementById('m-location').value = m ? (m.location||'') : '';
+  document.getElementById('m-serial').value   = m ? (m.serialNo||'') : '';
+  document.getElementById('m-driver').value   = m ? (m.driver||'') : '';
+  document.getElementById('m-note').value     = m ? (m.note||'') : '';
+  document.getElementById('m-type').value     = m ? (m.machineType||'Drill Rig') : 'Drill Rig';
   document.getElementById('machineModal').classList.add('open');
 }
 
-async function saveMachine() {
-  const name = document.getElementById('m-name').value.trim();
+function saveMachine() {
+  var name = document.getElementById('m-name').value.trim();
   if (!name) { toast('กรุณาระบุชื่อเครื่องจักร', 'error'); return; }
-  const data = {
-    id: editMachineId || uuid(), name,
+  var data = {
+    id: editMachineId || uuid(), name: name,
     location: document.getElementById('m-location').value,
     serialNo: document.getElementById('m-serial').value,
     driver: document.getElementById('m-driver').value,
     machineType: document.getElementById('m-type').value,
-    note: document.getElementById('m-note').value,
+    note: document.getElementById('m-note').value
   };
   if (editMachineId) {
-    const i = DB.Machines.findIndex(x => String(x.id) === String(editMachineId));
-    if (i >= 0) DB.Machines[i] = data;
-  } else { DB.Machines.push(data); }
-  closeModal('machineModal');
-  renderMachines();
-  renderDashboard();
-  try {
-    const res = editMachineId ? await apiPost({ action: 'update', sheet: 'Machines', id: editMachineId, data }) : await apiPost({ action: 'add', sheet: 'Machines', data });
-    toast('บันทึกสำเร็จ ✓', 'success');
-  } catch(e) { toast('บันทึก offline', ''); }
+    var idx = DB.Machines.findIndex(function(x) { return String(x.id) === String(editMachineId); });
+    if (idx >= 0) DB.Machines[idx] = data;
+  } else {
+    DB.Machines.push(data);
+  }
+  closeModal('machineModal'); renderMachines(); renderDashboard();
+  var action = editMachineId ? 'update' : 'add';
+  var body   = editMachineId ? { action:action, sheet:'Machines', id:editMachineId, data:data } : { action:action, sheet:'Machines', data:data };
+  apiPost(body).then(function() { toast('บันทึกสำเร็จ ✓', 'success'); }).catch(function() { toast('บันทึก offline', ''); });
 }
 
-async function deleteMachine(id) {
+function deleteMachine(id) {
   if (!confirm('ลบเครื่องจักรนี้?')) return;
-  DB.Machines = DB.Machines.filter(m => String(m.id) !== String(id));
+  DB.Machines = DB.Machines.filter(function(m) { return String(m.id) !== String(id); });
   expandedMachine = null;
   renderMachines(); renderDashboard();
-  try { await apiPost({ action: 'delete', sheet: 'Machines', id }); toast('ลบแล้ว', 'success'); }
-  catch(e) {}
+  apiPost({ action:'delete', sheet:'Machines', id:id }).catch(function(){});
 }
 
-async function deleteRecord(type, id) {
+function deleteRecord(type, id) {
   if (!confirm('ลบรายการนี้?')) return;
-  DB[type] = DB[type].filter(r => String(r.id) !== String(id));
+  DB[type] = DB[type].filter(function(r) { return String(r.id) !== String(id); });
   renderMachines(); renderDashboard();
-  try { await apiPost({ action: 'delete', sheet: type, id }); }
-  catch(e) {}
+  apiPost({ action:'delete', sheet:type, id:id }).catch(function(){});
 }
 
 // ========== CARS ==========
-let editCarId = null;
+var editCarId = null;
+
 function renderCars() {
-  const tbody = document.getElementById('carsTbody');
-  tbody.innerHTML = (DB.Cars||[]).map(c => {
-    const nextKm = +c.nextKm || 0;
-    const curKm = +c.currentKm || 0;
-    const diff = nextKm && curKm ? nextKm - curKm : null;
-    const status = diff === null ? 'unknown' : diff <= 0 ? 'overdue' : diff <= 1000 ? 'urgent' : 'ok';
-    return `<tr>
-      <td class="nowrap"><strong>${c.plateNo||'—'}</strong></td>
-      <td>${c.carNo||'—'}</td>
-      <td style="font-size:12px;color:#78909C">${c.chassis||'—'}</td>
-      <td class="nowrap">${numFmt(c.prevKm)} กม.</td>
-      <td class="nowrap">${formatThaiDate(c.changeDate)}</td>
-      <td class="nowrap" style="font-weight:700;color:var(--primary)">${numFmt(c.nextKm)} กม.</td>
-      <td>${badge(status, diff!==null?(diff<=0?`เลย ${Math.abs(diff)} กม.`:`เหลือ ${diff} กม.`):'—')}</td>
-      <td class="nowrap">
-        <button class="btn btn-sm btn-warning" onclick="openCarModal('${c.id}')">✏️</button>
-        <button class="btn btn-sm btn-danger" onclick="deleteCar('${c.id}')">🗑</button>
-      </td></tr>`;
+  var tbody = document.getElementById('carsTbody');
+  tbody.innerHTML = (DB.Cars || []).map(function(c) {
+    var nextKm = +c.nextKm || 0;
+    var curKm  = +c.currentKm || 0;
+    var diff   = (nextKm && curKm) ? nextKm - curKm : null;
+    var status = diff === null ? 'unknown' : diff <= 0 ? 'overdue' : diff <= 1000 ? 'urgent' : 'ok';
+    return '<tr><td class="nowrap"><strong>' + (c.plateNo||'—') + '</strong></td><td>' + (c.carNo||'—') + '</td><td style="font-size:12px;color:#78909C">' + (c.chassis||'—') + '</td>' +
+      '<td class="nowrap">' + numFmt(c.prevKm) + ' กม.</td><td class="nowrap">' + formatThaiDate(c.changeDate) + '</td>' +
+      '<td class="nowrap" style="font-weight:700;color:var(--primary)">' + numFmt(c.nextKm) + ' กม.</td>' +
+      '<td>' + badge(status, diff !== null ? (diff <= 0 ? 'เลย '+Math.abs(diff)+' กม.' : 'เหลือ '+diff+' กม.') : '—') + '</td>' +
+      '<td class="nowrap"><button class="btn btn-sm btn-warning" onclick="openCarModal(\'' + c.id + '\')">✏️</button> <button class="btn btn-sm btn-danger" onclick="deleteCar(\'' + c.id + '\')">🗑</button></td></tr>';
   }).join('') || '<tr><td colspan="8" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีข้อมูล</td></tr>';
 }
 
-function openCarModal(id = null) {
-  editCarId = id;
-  const c = id ? (DB.Cars||[]).find(x => String(x.id) === String(id)) : null;
+function openCarModal(id) {
+  editCarId = id || null;
+  var c = id ? (DB.Cars || []).find(function(x) { return String(x.id) === String(id); }) : null;
   document.getElementById('carModalTitle').textContent = c ? 'แก้ไขรถบริษัท' : 'เพิ่มรถบริษัท';
-  ['c-plate','c-no','c-chassis','c-brand','c-grade','c-note','c-tech'].forEach(k => document.getElementById(k).value = c?.[k.replace('c-','')] || '');
-  document.getElementById('c-plate').value = c?.plateNo || '';
-  document.getElementById('c-no').value = c?.carNo || '';
-  document.getElementById('c-chassis').value = c?.chassis || '';
-  document.getElementById('c-prevkm').value = c?.prevKm || '';
-  document.getElementById('c-date').value = c?.changeDate || todayThai();
-  document.getElementById('c-curkm').value = c?.currentKm || '';
-  document.getElementById('c-nextkm').value = c?.nextKm || '';
-  document.getElementById('c-brand').value = c?.oilBrand || '';
-  document.getElementById('c-grade').value = c?.oilGrade || '';
-  document.getElementById('c-liters').value = c?.liters || '';
-  document.getElementById('c-tech').value = c?.technicianName || '';
-  document.getElementById('c-note').value = c?.note || '';
+  document.getElementById('c-plate').value  = c ? (c.plateNo||'') : '';
+  document.getElementById('c-no').value     = c ? (c.carNo||'') : '';
+  document.getElementById('c-chassis').value= c ? (c.chassis||'') : '';
+  document.getElementById('c-prevkm').value = c ? (c.prevKm||'') : '';
+  document.getElementById('c-date').value   = c ? (c.changeDate||todayThai()) : todayThai();
+  document.getElementById('c-curkm').value  = c ? (c.currentKm||'') : '';
+  document.getElementById('c-nextkm').value = c ? (c.nextKm||'') : '';
+  document.getElementById('c-brand').value  = c ? (c.oilBrand||'') : '';
+  document.getElementById('c-grade').value  = c ? (c.oilGrade||'') : '';
+  document.getElementById('c-liters').value = c ? (c.liters||'') : '';
+  document.getElementById('c-tech').value   = c ? (c.technicianName||'') : '';
+  document.getElementById('c-note').value   = c ? (c.note||'') : '';
   document.getElementById('carModal').classList.add('open');
 }
 
-async function saveCar() {
-  const plate = document.getElementById('c-plate').value.trim();
+function saveCar() {
+  var plate = document.getElementById('c-plate').value.trim();
   if (!plate) { toast('ระบุทะเบียนรถ', 'error'); return; }
-  const data = {
+  var data = {
     id: editCarId || uuid(), plateNo: plate,
     carNo: document.getElementById('c-no').value,
     chassis: document.getElementById('c-chassis').value,
@@ -1582,278 +1307,375 @@ async function saveCar() {
     oilGrade: document.getElementById('c-grade').value,
     liters: document.getElementById('c-liters').value || null,
     technicianName: document.getElementById('c-tech').value,
-    note: document.getElementById('c-note').value,
+    note: document.getElementById('c-note').value
   };
+  if (!DB.Cars) DB.Cars = [];
   if (editCarId) {
-    const i = (DB.Cars||[]).findIndex(x => String(x.id) === String(editCarId));
-    if (i >= 0) DB.Cars[i] = data; else DB.Cars.push(data);
-  } else { if (!DB.Cars) DB.Cars = []; DB.Cars.push(data); }
+    var idx = DB.Cars.findIndex(function(x) { return String(x.id) === String(editCarId); });
+    if (idx >= 0) DB.Cars[idx] = data; else DB.Cars.push(data);
+  } else { DB.Cars.push(data); }
   closeModal('carModal'); renderCars();
-  try {
-    editCarId ? await apiPost({ action:'update', sheet:'Cars', id:editCarId, data }) : await apiPost({ action:'add', sheet:'Cars', data });
-    toast('บันทึกสำเร็จ ✓', 'success');
-  } catch(e) { toast('บันทึก offline', ''); }
+  var body = editCarId ? { action:'update', sheet:'Cars', id:editCarId, data:data } : { action:'add', sheet:'Cars', data:data };
+  apiPost(body).then(function() { toast('บันทึกสำเร็จ ✓', 'success'); }).catch(function() { toast('บันทึก offline', ''); });
 }
 
-async function deleteCar(id) {
+function deleteCar(id) {
   if (!confirm('ลบรายการ?')) return;
-  DB.Cars = (DB.Cars||[]).filter(c => String(c.id) !== String(id));
+  DB.Cars = (DB.Cars || []).filter(function(c) { return String(c.id) !== String(id); });
   renderCars();
-  try { await apiPost({ action: 'delete', sheet: 'Cars', id }); }
-  catch(e) {}
+  apiPost({ action:'delete', sheet:'Cars', id:id }).catch(function(){});
 }
 
 // ========== BOOKINGS ==========
 function updateBookingSubType() {
-  const type = document.getElementById('b-oiltype').value;
-  const typeKey = { 'น้ำมันเกียร์':'Gear', 'น้ำมันไฮดรอลิค':'Hydraulic', 'จารบี':'Grease' }[type] || null;
-  const sel = document.getElementById('b-subtype');
-  const grp = document.getElementById('bSubGroup');
-  if (typeKey && OIL_CONFIG[typeKey].subTypes.length) {
+  var type = document.getElementById('b-oiltype').value;
+  var typeMap = { 'น้ำมันเกียร์':'Gear', 'น้ำมันไฮดรอลิค':'Hydraulic', 'จารบี':'Grease' };
+  var typeKey  = typeMap[type] || null;
+  var sel = document.getElementById('b-subtype');
+  var grp = document.getElementById('bSubGroup');
+  if (typeKey && OIL_CONFIG[typeKey] && OIL_CONFIG[typeKey].subTypes.length > 0) {
     grp.style.display = '';
-    sel.innerHTML = '<option value="">— ทั้งหมด —</option>' + OIL_CONFIG[typeKey].subTypes.map(s => `<option>${s}</option>`).join('');
-  } else { grp.style.display = 'none'; sel.innerHTML = ''; }
+    sel.innerHTML = '<option value="">— ทั้งหมด —</option>' + OIL_CONFIG[typeKey].subTypes.map(function(s) { return '<option>' + s + '</option>'; }).join('');
+  } else {
+    grp.style.display = 'none'; sel.innerHTML = '';
+  }
 }
 
-function openBookingModal(machineId = '', type = '', subType = '') {
-  event.stopPropagation && event.stopPropagation();
-  const mSel = document.getElementById('b-machine');
-  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(m => `<option value="${m.id}" ${String(m.id)===String(machineId)?'selected':''}>${m.name}</option>`).join('');
+function openBookingModal(machineId, type, subType) {
+  event && event.stopPropagation && event.stopPropagation();
+  var mSel = document.getElementById('b-machine');
+  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(function(m) {
+    return '<option value="' + m.id + '"' + (String(m.id)===String(machineId) ? ' selected' : '') + '>' + m.name + '</option>';
+  }).join('');
   document.getElementById('b-date').value = '';
   document.getElementById('b-tech').value = '';
   document.getElementById('b-note').value = '';
-  const typeMap = { Engine:'น้ำมันเครื่อง', Gear:'น้ำมันเกียร์', Hydraulic:'น้ำมันไฮดรอลิค', Grease:'จารบี' };
+  var typeMap = { Engine:'น้ำมันเครื่อง', Gear:'น้ำมันเกียร์', Hydraulic:'น้ำมันไฮดรอลิค', Grease:'จารบี' };
   document.getElementById('b-oiltype').value = typeMap[type] || 'น้ำมันเครื่อง';
   updateBookingSubType();
   if (subType) document.getElementById('b-subtype').value = subType;
   document.getElementById('bookingModal').classList.add('open');
 }
 
-async function saveBooking() {
-  const machineId = document.getElementById('b-machine').value;
-  const bookDate = document.getElementById('b-date').value;
+function saveBooking() {
+  var machineId = document.getElementById('b-machine').value;
+  var bookDate  = document.getElementById('b-date').value;
   if (!machineId || !bookDate) { toast('เลือกเครื่องและวันที่จอง', 'error'); return; }
-  const machine = DB.Machines.find(m => String(m.id) === String(machineId));
-  const data = {
-    id: uuid(), machineId, machineName: machine?.name||'',
+  var machine = DB.Machines.find(function(m) { return String(m.id) === String(machineId); });
+  var data = {
+    id: uuid(), machineId: machineId, machineName: machine ? machine.name : '',
     oilType: document.getElementById('b-oiltype').value,
     subType: document.getElementById('b-subtype').value,
-    bookDate, technicianName: document.getElementById('b-tech').value,
-    status: 'รอดำเนินการ', note: document.getElementById('b-note').value,
-    createdAt: todayThai(),
+    bookDate: bookDate, technicianName: document.getElementById('b-tech').value,
+    status: 'รอดำเนินการ', note: document.getElementById('b-note').value, createdAt: todayThai()
   };
   if (!DB.Bookings) DB.Bookings = [];
   DB.Bookings.push(data);
   closeModal('bookingModal'); renderBookings(); renderDashboard();
-  try { await apiPost({ action: 'add', sheet: 'Bookings', data }); toast('จองคิวสำเร็จ ✓', 'success'); }
-  catch(e) { toast('บันทึก offline', ''); }
+  apiPost({ action:'add', sheet:'Bookings', data:data }).then(function() { toast('จองคิวสำเร็จ ✓', 'success'); }).catch(function() { toast('บันทึก offline', ''); });
 }
 
 function renderBookings() {
-  const tbody = document.getElementById('bookingsTbody');
-  const sorted = [...(DB.Bookings||[])].sort((a,b) => (b.bookDate||'').localeCompare(a.bookDate||''));
-  tbody.innerHTML = sorted.map(b => `<tr>
-    <td><strong>${b.machineName||'—'}</strong></td>
-    <td>${b.oilType||'—'}</td>
-    <td>${b.subType||'—'}</td>
-    <td class="nowrap">${formatThaiDate(b.bookDate)}</td>
-    <td>${b.technicianName||'—'}</td>
-    <td>${badge(b.status==='เสร็จแล้ว'?'ok':'pending', b.status||'รอ')}</td>
-    <td style="font-size:12px;color:#78909C">${b.note||'—'}</td>
-    <td class="nowrap">
-      <button class="btn btn-sm btn-success" onclick="markBookingDone('${b.id}')">✅</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteBooking('${b.id}')">🗑</button>
-    </td></tr>`).join('') || '<tr><td colspan="8" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีการจอง</td></tr>';
+  var sorted = (DB.Bookings || []).slice().sort(function(a,b) { return (b.bookDate||'').localeCompare(a.bookDate||''); });
+  document.getElementById('bookingsTbody').innerHTML = sorted.map(function(b) {
+    return '<tr><td><strong>' + (b.machineName||'—') + '</strong></td><td>' + (b.oilType||'—') + '</td><td>' + (b.subType||'—') + '</td>' +
+      '<td class="nowrap">' + formatThaiDate(b.bookDate) + '</td><td>' + (b.technicianName||'—') + '</td>' +
+      '<td>' + badge(b.status==='เสร็จแล้ว' ? 'ok' : 'pending', b.status||'รอ') + '</td>' +
+      '<td style="font-size:12px;color:#78909C">' + (b.note||'—') + '</td>' +
+      '<td class="nowrap"><button class="btn btn-sm btn-success" onclick="markBookingDone(\'' + b.id + '\')">✅</button> <button class="btn btn-sm btn-danger" onclick="deleteBooking(\'' + b.id + '\')">🗑</button></td></tr>';
+  }).join('') || '<tr><td colspan="8" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีการจอง</td></tr>';
 }
 
-async function markBookingDone(id) {
-  const i = (DB.Bookings||[]).findIndex(b => String(b.id) === String(id));
-  if (i >= 0) DB.Bookings[i].status = 'เสร็จแล้ว';
+function markBookingDone(id) {
+  var idx = (DB.Bookings || []).findIndex(function(b) { return String(b.id) === String(id); });
+  if (idx >= 0) DB.Bookings[idx].status = 'เสร็จแล้ว';
   renderBookings(); renderDashboard();
-  try { await apiPost({ action: 'update', sheet: 'Bookings', id, data: { status: 'เสร็จแล้ว' } }); }
-  catch(e) {}
+  apiPost({ action:'update', sheet:'Bookings', id:id, data:{ status:'เสร็จแล้ว' } }).catch(function(){});
 }
 
-async function deleteBooking(id) {
+function deleteBooking(id) {
   if (!confirm('ลบการจอง?')) return;
-  DB.Bookings = (DB.Bookings||[]).filter(b => String(b.id) !== String(id));
+  DB.Bookings = (DB.Bookings || []).filter(function(b) { return String(b.id) !== String(id); });
   renderBookings(); renderDashboard();
-  try { await apiPost({ action: 'delete', sheet: 'Bookings', id }); }
-  catch(e) {}
+  apiPost({ action:'delete', sheet:'Bookings', id:id }).catch(function(){});
 }
 
 // ========== REPAIRS ==========
-let editRepairId = null;
-function openRepairModal(machineId = null) {
-  event.stopPropagation && event.stopPropagation();
+var editRepairId = null;
+
+function openRepairModal(machineId) {
+  event && event.stopPropagation && event.stopPropagation();
   editRepairId = null;
   document.getElementById('repairModalTitle').textContent = 'บันทึกการซ่อม';
-  const mSel = document.getElementById('r-machine');
-  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(m => `<option value="${m.id}" ${String(m.id)===String(machineId)?'selected':''}>${m.name}</option>`).join('');
-  ['r-date','r-detail','r-shop','r-tech','r-hours','r-note'].forEach(id => document.getElementById(id).value = '');
+  var mSel = document.getElementById('r-machine');
+  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(function(m) {
+    return '<option value="' + m.id + '"' + (String(m.id)===String(machineId) ? ' selected' : '') + '>' + m.name + '</option>';
+  }).join('');
+  ['r-date','r-detail','r-shop','r-tech','r-hours','r-note'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
   document.getElementById('r-date').value = todayThai();
   document.getElementById('r-status').value = 'เปิด';
   document.getElementById('repairModal').classList.add('open');
 }
 
-async function saveRepair() {
-  const machineId = document.getElementById('r-machine').value;
-  const repairDate = document.getElementById('r-date').value;
-  const repairDetail = document.getElementById('r-detail').value.trim();
+function saveRepair() {
+  var machineId    = document.getElementById('r-machine').value;
+  var repairDate   = document.getElementById('r-date').value;
+  var repairDetail = document.getElementById('r-detail').value.trim();
   if (!machineId || !repairDate || !repairDetail) { toast('กรุณากรอก เครื่อง, วันที่ และ รายละเอียด', 'error'); return; }
-  const machine = DB.Machines.find(m => String(m.id) === String(machineId));
-  const data = {
-    id: editRepairId || uuid(), machineId, machineName: machine?.name||'',
-    repairDate, repairDetail,
+  var machine = DB.Machines.find(function(m) { return String(m.id) === String(machineId); });
+  var data = {
+    id: editRepairId || uuid(), machineId: machineId, machineName: machine ? machine.name : '',
+    repairDate: repairDate, repairDetail: repairDetail,
     repairShop: document.getElementById('r-shop').value,
     technicianName: document.getElementById('r-tech').value,
     hours: document.getElementById('r-hours').value || null,
     status: document.getElementById('r-status').value,
-    note: document.getElementById('r-note').value,
+    note: document.getElementById('r-note').value
   };
   if (!DB.Repairs) DB.Repairs = [];
-  if (editRepairId) { const i = DB.Repairs.findIndex(r => r.id === editRepairId); if (i>=0) DB.Repairs[i]=data; }
-  else DB.Repairs.push(data);
+  if (editRepairId) {
+    var idx = DB.Repairs.findIndex(function(r) { return r.id === editRepairId; });
+    if (idx >= 0) DB.Repairs[idx] = data;
+  } else { DB.Repairs.push(data); }
   closeModal('repairModal'); renderRepairs(); renderMachines(); renderDashboard();
-  try {
-    editRepairId ? await apiPost({ action:'update', sheet:'Repairs', id:editRepairId, data }) : await apiPost({ action:'add', sheet:'Repairs', data });
-    toast('บันทึกสำเร็จ ✓', 'success');
-  } catch(e) { toast('บันทึก offline', ''); }
+  var body = editRepairId ? { action:'update', sheet:'Repairs', id:editRepairId, data:data } : { action:'add', sheet:'Repairs', data:data };
+  apiPost(body).then(function() { toast('บันทึกสำเร็จ ✓', 'success'); }).catch(function() { toast('บันทึก offline', ''); });
 }
 
 function renderRepairs() {
-  const search = (document.getElementById('repairSearch').value||'').toLowerCase();
-  const sf = document.getElementById('repairStatusFilter').value;
-  const tbody = document.getElementById('repairsTbody');
-  const rows = [...(DB.Repairs||[])].filter(r => {
+  var search = (document.getElementById('repairSearch').value || '').toLowerCase();
+  var sf     = document.getElementById('repairStatusFilter').value;
+  var rows   = (DB.Repairs || []).filter(function(r) {
     if (sf && r.status !== sf) return false;
-    if (search && !(`${r.machineName} ${r.repairDetail} ${r.repairShop} ${r.technicianName}`).toLowerCase().includes(search)) return false;
+    if (search && !(r.machineName+' '+r.repairDetail+' '+r.repairShop+' '+r.technicianName).toLowerCase().includes(search)) return false;
     return true;
-  }).sort((a,b) => (b.repairDate||'').localeCompare(a.repairDate||''));
-  tbody.innerHTML = rows.map(r => `<tr>
-    <td><strong>${r.machineName||'—'}</strong></td>
-    <td class="nowrap">${formatThaiDate(r.repairDate)}</td>
-    <td style="font-size:13px;max-width:260px">${r.repairDetail||'—'}</td>
-    <td>${r.repairShop||'—'}</td>
-    <td>${r.technicianName||'—'}</td>
-    <td>${r.hours ? numFmt(r.hours)+' ชม.' : '—'}</td>
-    <td>${badge(r.status==='เสร็จแล้ว'?'ok':r.status==='กำลังซ่อม'?'urgent':'open', r.status||'—')}</td>
-    <td>${r.note ? `<span style="font-size:12px;color:#78909C">${r.note}</span>` : '—'}</td>
-    <td class="nowrap">
-      <button class="btn btn-sm btn-warning" onclick="editRepair('${r.id}')">✏️</button>
-      <button class="btn btn-sm btn-danger" onclick="deleteRepair('${r.id}')">🗑</button>
-    </td></tr>`).join('') || '<tr><td colspan="9" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีข้อมูล</td></tr>';
+  }).sort(function(a,b) { return (b.repairDate||'').localeCompare(a.repairDate||''); });
+
+  document.getElementById('repairsTbody').innerHTML = rows.map(function(r) {
+    var st = r.status === 'เสร็จแล้ว' ? 'ok' : r.status === 'กำลังซ่อม' ? 'urgent' : 'open';
+    return '<tr><td><strong>' + (r.machineName||'—') + '</strong></td><td class="nowrap">' + formatThaiDate(r.repairDate) + '</td>' +
+      '<td style="font-size:13px;max-width:260px">' + (r.repairDetail||'—') + '</td><td>' + (r.repairShop||'—') + '</td><td>' + (r.technicianName||'—') + '</td>' +
+      '<td>' + (r.hours ? numFmt(r.hours)+' ชม.' : '—') + '</td><td>' + badge(st, r.status||'—') + '</td>' +
+      '<td>' + (r.note ? '<span style="font-size:12px;color:#78909C">'+r.note+'</span>' : '—') + '</td>' +
+      '<td class="nowrap"><button class="btn btn-sm btn-warning" onclick="editRepair(\'' + r.id + '\')">✏️</button> <button class="btn btn-sm btn-danger" onclick="deleteRepair(\'' + r.id + '\')">🗑</button></td></tr>';
+  }).join('') || '<tr><td colspan="9" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีข้อมูล</td></tr>';
 }
 
 function editRepair(id) {
-  const r = (DB.Repairs||[]).find(x => x.id === id);
+  var r = (DB.Repairs || []).find(function(x) { return x.id === id; });
   if (!r) return;
   editRepairId = id;
   document.getElementById('repairModalTitle').textContent = 'แก้ไขการซ่อม';
-  const mSel = document.getElementById('r-machine');
-  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(m => `<option value="${m.id}" ${String(m.id)===String(r.machineId)?'selected':''}>${m.name}</option>`).join('');
-  document.getElementById('r-date').value = r.repairDate||'';
+  var mSel = document.getElementById('r-machine');
+  mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(function(m) {
+    return '<option value="' + m.id + '"' + (String(m.id)===String(r.machineId) ? ' selected' : '') + '>' + m.name + '</option>';
+  }).join('');
+  document.getElementById('r-date').value   = r.repairDate||'';
   document.getElementById('r-detail').value = r.repairDetail||'';
-  document.getElementById('r-shop').value = r.repairShop||'';
-  document.getElementById('r-tech').value = r.technicianName||'';
-  document.getElementById('r-hours').value = r.hours||'';
+  document.getElementById('r-shop').value   = r.repairShop||'';
+  document.getElementById('r-tech').value   = r.technicianName||'';
+  document.getElementById('r-hours').value  = r.hours||'';
   document.getElementById('r-status').value = r.status||'เปิด';
-  document.getElementById('r-note').value = r.note||'';
+  document.getElementById('r-note').value   = r.note||'';
   document.getElementById('repairModal').classList.add('open');
 }
 
-async function deleteRepair(id) {
+function deleteRepair(id) {
   if (!confirm('ลบรายการ?')) return;
-  DB.Repairs = (DB.Repairs||[]).filter(r => r.id !== id);
+  DB.Repairs = (DB.Repairs || []).filter(function(r) { return r.id !== id; });
   renderRepairs(); renderDashboard();
-  try { await apiPost({ action: 'delete', sheet: 'Repairs', id }); }
-  catch(e) {}
+  apiPost({ action:'delete', sheet:'Repairs', id:id }).catch(function(){});
 }
 
 // ========== ALERTS ==========
 function renderAlerts() {
-  const priority = ['overdue','urgent','soon'];
-  const alertMachines = DB.Machines.map(m => ({ m, ms: getMachineStatus(m.id) }))
-    .filter(({ ms }) => priority.includes(ms.worstStatus))
-    .sort((a,b) => priority.indexOf(a.ms.worstStatus) - priority.indexOf(b.ms.worstStatus));
+  var alertMs = DB.Machines.map(function(m) { return { m:m, ms:getMachineStatus(m.id) }; })
+    .filter(function(x) { return ['overdue','urgent','soon'].indexOf(x.ms.worstStatus) !== -1; })
+    .sort(function(a,b) { return PRIO.indexOf(a.ms.worstStatus) - PRIO.indexOf(b.ms.worstStatus); });
 
-  document.getElementById('alertsContent').innerHTML = alertMachines.length ? alertMachines.map(({ m, ms }) => `
-    <div class="card" style="margin-bottom:14px;border-left:4px solid var(--${ms.worstStatus==='overdue'?'danger':ms.worstStatus==='urgent'?'orange':'warning'})">
-      <div class="card-body">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-          <div>
-            <strong style="font-size:16px">${m.name}</strong>
-            <span style="color:#78909C;font-size:13px;margin-left:10px">📍 ${m.location||'—'}</span>
-          </div>
-          <div style="display:flex;gap:8px">
-            ${badge(ms.worstStatus)}
-            <button class="btn btn-sm" style="background:var(--teal);color:#fff" onclick="openBookingModal('${m.id}')">📅 จองคิว</button>
-          </div>
-        </div>
-        ${Object.entries(OIL_CONFIG).map(([type, cfg]) => {
-          const items = (ms.detail[type]||[]).filter(x => priority.includes(x.status));
-          if (!items.length) return '';
-          return items.map(item => `
-            <div style="background:#FFF8F0;border-radius:8px;padding:10px;margin-bottom:6px;border:1px solid #FFCC80;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">
-              <span>${cfg.icon} <strong>${cfg.label}</strong>${item.subType?' — '+item.subType:''}</span>
-              <div style="display:flex;gap:8px;align-items:center">
-                ${badge(item.status)}
-                ${item.days!==null?`<span style="font-size:13px">${item.days<0?`เลย ${Math.abs(item.days)} วัน`:`อีก ${item.days} วัน`}</span>`:''}
-                <span style="font-size:12px;color:#78909C">${formatThaiDate(item.latest?.nextDate)}</span>
-                <button class="btn btn-sm btn-primary" onclick="openOilModal('${m.id}','${m.name}','${type}','${item.subType||''}')">+ บันทึก</button>
-              </div>
-            </div>`).join('');
-        }).join('')}
-      </div>
-    </div>`).join('')
-  : '<div class="card" style="padding:30px;text-align:center;color:var(--success);font-size:16px;font-weight:700">✅ ทุกเครื่องอยู่ในสถานะปกติ ไม่มีรายการที่ต้องดำเนินการ</div>';
+  document.getElementById('alertsContent').innerHTML = alertMs.length ? alertMs.map(function(x) {
+    var m  = x.m;
+    var ms = x.ms;
+    var clr = ms.worstStatus === 'overdue' ? 'danger' : ms.worstStatus === 'urgent' ? 'orange' : 'warning';
+    var oilHtml = Object.keys(OIL_CONFIG).map(function(type) {
+      var cfg   = OIL_CONFIG[type];
+      var items = (ms.detail[type] || []).filter(function(i) { return ['overdue','urgent','soon'].indexOf(i.status) !== -1; });
+      return items.map(function(item) {
+        var dTxt = item.days !== null ? (item.days < 0 ? 'เลย '+Math.abs(item.days)+' วัน' : 'อีก '+item.days+' วัน') : '';
+        return '<div style="background:#FFF8F0;border-radius:8px;padding:10px;margin-bottom:6px;border:1px solid #FFCC80;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
+          '<span>' + cfg.icon + ' <strong>' + cfg.label + '</strong>' + (item.subType ? ' — '+item.subType : '') + '</span>' +
+          '<div style="display:flex;gap:8px;align-items:center">' + badge(item.status) +
+          (dTxt ? '<span style="font-size:13px">' + dTxt + '</span>' : '') +
+          '<span style="font-size:12px;color:#78909C">' + formatThaiDate(item.latest ? item.latest.nextDate : null) + '</span>' +
+          '<button class="btn btn-sm btn-primary" onclick="openOilModal(\'' + m.id + '\',\'' + m.name.replace(/'/g,"\\'") + '\',\'' + type + '\',\'' + (item.subType||'') + '\')">+ บันทึก</button>' +
+          '</div></div>';
+      }).join('');
+    }).join('');
+
+    return '<div class="card" style="margin-bottom:14px;border-left:4px solid var(--' + clr + ')">' +
+      '<div class="card-body">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">' +
+          '<div><strong style="font-size:16px">' + m.name + '</strong><span style="color:#78909C;font-size:13px;margin-left:10px">📍 ' + (m.location||'—') + '</span></div>' +
+          '<div style="display:flex;gap:8px">' + badge(ms.worstStatus) +
+          '<button class="btn btn-sm" style="background:var(--teal);color:#fff" onclick="openBookingModal(\'' + m.id + '\',\'\',\'\')">📅 จองคิว</button>' +
+          '</div></div>' + oilHtml + '</div></div>';
+  }).join('') : '<div class="card" style="padding:30px;text-align:center;color:var(--success);font-size:16px;font-weight:700">✅ ทุกเครื่องอยู่ในสถานะปกติ</div>';
+}
+
+// ========== SETTINGS: OIL CONFIG ==========
+var _oilSaveTimer = null;
+function saveOilConfigDebounced() {
+  localStorage.setItem('oil_config', JSON.stringify(OIL_CONFIG));
+  clearTimeout(_oilSaveTimer);
+  _oilSaveTimer = setTimeout(function() { saveOilConfig(true); }, 1200);
+}
+
+function forcePushOilConfig() {
+  if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); return; }
+  apiPost({ action:'saveOilConfig', config:OIL_CONFIG })
+    .then(function() { toast('☁️ Push การตั้งค่าไป Sheet สำเร็จ ✓', 'success'); })
+    .catch(function(e) { toast('❌ Push ไม่สำเร็จ', 'error'); });
+}
+
+function renderOilConfigSettings() {
+  var el = document.getElementById('oilConfigList');
+  if (!el) return;
+  el.innerHTML = Object.entries(OIL_CONFIG).map(function(entry) {
+    var key = entry[0]; var cfg = entry[1];
+    var tagsHtml = cfg.subTypes.map(function(s, i) {
+      return '<span class="sub-tag">' + s + '<span class="tag-del" onclick="deleteBaseSubType(\'' + key + '\',' + i + ')" title="ลบ">×</span></span>';
+    }).join('');
+    return '<div class="oil-cfg-card" id="oilcfg-' + key + '">' +
+      '<div class="oil-cfg-hdr">' +
+        '<span class="oil-cfg-icon" title="คลิกเพื่อเปลี่ยน icon" onclick="pickIcon(\'' + key + '\')">' + cfg.icon + '</span>' +
+        '<input class="oil-cfg-name" value="' + cfg.label + '" onchange="updateOilLabel(\'' + key + '\',this.value)" title="แก้ชื่อหัวข้อ">' +
+        '<span style="font-size:13px;color:#78909C;margin-left:auto">ระยะเปลี่ยน (ชม.)</span>' +
+        '<input class="oil-cfg-interval" type="number" value="' + cfg.interval + '" min="1" onchange="updateOilInterval(\'' + key + '\',this.value)">' +
+        '<button class="btn btn-sm btn-danger" style="padding:5px 12px" onclick="deleteOilType(\'' + key + '\')">🗑 ลบหัวข้อ</button>' +
+      '</div>' +
+      '<div class="oil-cfg-body">' +
+        '<div style="font-size:12px;color:#78909C;margin-bottom:8px;font-weight:600">ประเภทย่อย (Global Default):</div>' +
+        '<div id="subtags-' + key + '" style="display:flex;flex-wrap:wrap;gap:0">' + tagsHtml + '</div>' +
+        '<div class="add-sub-row">' +
+          '<input class="add-sub-input" id="newSub-' + key + '" placeholder="พิมพ์ชื่อประเภทย่อยใหม่..." onkeydown="if(event.key===\'Enter\')addBaseSubType(\'' + key + '\')">' +
+          '<button class="btn btn-sm btn-success" onclick="addBaseSubType(\'' + key + '\')">+ เพิ่ม</button>' +
+        '</div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function updateOilLabel(key, val) {
+  if (!val.trim()) return;
+  OIL_CONFIG[key].label = val.trim();
+  saveOilConfigDebounced();
+}
+function updateOilInterval(key, val) {
+  var n = parseInt(val, 10);
+  if (isNaN(n) || n < 1) return;
+  OIL_CONFIG[key].interval = n;
+  saveOilConfigDebounced();
+}
+function addBaseSubType(key) {
+  var inp  = document.getElementById('newSub-' + key);
+  var name = inp.value.trim();
+  if (!name) return;
+  if (OIL_CONFIG[key].subTypes.indexOf(name) !== -1) { toast('มีชื่อนี้อยู่แล้ว', 'error'); return; }
+  OIL_CONFIG[key].subTypes.push(name);
+  saveOilConfig(true);
+  inp.value = '';
+  renderOilConfigSettings();
+}
+function deleteBaseSubType(key, idx) {
+  var name = OIL_CONFIG[key].subTypes[idx];
+  if (!confirm('ลบ "' + name + '" ออกจาก default ทุกเครื่อง?\n\nข้อมูลที่บันทึกไว้จะไม่หาย')) return;
+  OIL_CONFIG[key].subTypes.splice(idx, 1);
+  saveOilConfig(true);
+  renderOilConfigSettings();
+  toast('ลบ "' + name + '" แล้ว', 'success');
+}
+function addOilType() {
+  var key = 'OilType_' + Date.now();
+  OIL_CONFIG[key] = { label:'หัวข้อใหม่', icon:'🛢', interval:500, subTypes:[] };
+  saveOilConfig(true);
+  renderOilConfigSettings();
+  setTimeout(function() {
+    var inp = document.querySelector('#oilcfg-' + key + ' .oil-cfg-name');
+    if (inp) { inp.focus(); inp.select(); }
+  }, 50);
+  toast('เพิ่มหัวข้อใหม่แล้ว — แก้ชื่อได้เลย', 'success');
+}
+function deleteOilType(key) {
+  var label = OIL_CONFIG[key] ? OIL_CONFIG[key].label : key;
+  if (!confirm('🗑 ลบหัวข้อหลัก "' + label + '" ออกจากระบบ?\n\nข้อมูลที่บันทึกไว้จะไม่หาย')) return;
+  delete OIL_CONFIG[key];
+  saveOilConfig(true);
+  renderOilConfigSettings();
+  toast('ลบ "' + label + '" แล้ว', 'success');
+}
+function pickIcon(key) {
+  var existing = document.getElementById('iconPicker');
+  if (existing) existing.remove();
+  var el = document.getElementById('oilcfg-' + key);
+  if (!el) return;
+  var picker = document.createElement('div');
+  picker.id = 'iconPicker';
+  picker.style.cssText = 'position:absolute;background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px;display:flex;flex-wrap:wrap;gap:6px;max-width:280px;z-index:500;box-shadow:0 4px 20px rgba(0,0,0,.15)';
+  ICON_OPTIONS.forEach(function(ic) {
+    var btn = document.createElement('button');
+    btn.textContent = ic;
+    btn.style.cssText = 'font-size:22px;background:none;border:1.5px solid transparent;border-radius:6px;cursor:pointer;padding:4px 8px;transition:.1s';
+    btn.onmouseenter = function() { btn.style.borderColor = '#1976D2'; };
+    btn.onmouseleave = function() { btn.style.borderColor = 'transparent'; };
+    btn.onclick = function() { OIL_CONFIG[key].icon = ic; saveOilConfig(true); renderOilConfigSettings(); picker.remove(); };
+    picker.appendChild(btn);
+  });
+  var customRow = document.createElement('div');
+  customRow.style.cssText = 'width:100%;display:flex;gap:6px;margin-top:4px';
+  var cinp = document.createElement('input');
+  cinp.placeholder = 'หรือพิมพ์ emoji เอง...';
+  cinp.style.cssText = 'flex:1;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:16px;font-family:Sarabun,sans-serif';
+  var cBtn = document.createElement('button');
+  cBtn.textContent = 'ใช้';
+  cBtn.style.cssText = 'padding:5px 12px;background:var(--primary);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px';
+  cBtn.onclick = function() {
+    if (!cinp.value.trim()) return;
+    OIL_CONFIG[key].icon = cinp.value.trim();
+    saveOilConfig(true); renderOilConfigSettings(); picker.remove();
+  };
+  customRow.appendChild(cinp); customRow.appendChild(cBtn);
+  picker.appendChild(customRow);
+  el.querySelector('.oil-cfg-hdr').appendChild(picker);
+  setTimeout(function() {
+    document.addEventListener('click', function h(e) { if (!picker.contains(e.target)) { picker.remove(); document.removeEventListener('click', h); } });
+  }, 10);
 }
 
 // ========== INIT ==========
-document.querySelectorAll('.modal-overlay').forEach(m => {
-  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+document.querySelectorAll('.modal-overlay').forEach(function(m) {
+  m.addEventListener('click', function(e) { if (e.target === m) m.classList.remove('open'); });
 });
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(m => m.classList.remove('open'));
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(function(m) { m.classList.remove('open'); });
 });
 
-const savedUrl = localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbz4TswpoYB5IKXlHh25WXZTwmEjs8-u3beFjy7Qy0btvH0QOFGAYuXNUDe-b1EGogve/exec';
-document.getElementById('gasUrl').value = savedUrl;
-GAS_URL = savedUrl;
-if (!localStorage.getItem('gas_url')) {
-  localStorage.setItem('gas_url', savedUrl);
-}
+var savedUrl = localStorage.getItem('gas_url') || '';
+if (savedUrl) { document.getElementById('gasUrl').value = savedUrl; GAS_URL = savedUrl; }
 
 renderDashboard();
-renderOilConfigManager();
 
-// กู้คืน auto-sync toggle state
-const autoSyncSaved = localStorage.getItem('auto_sync');
-if (autoSyncSaved === '1') {
-  const tog = document.getElementById('autoSyncToggle');
-  if (tog) tog.checked = true;
-  autoSyncInterval = setInterval(() => { if (GAS_URL) syncData(true); }, 5 * 60 * 1000);
-}
-
-// sync ทันทีถ้ามี URL
 if (GAS_URL) {
-  const autoSyncBanner = document.createElement('div');
-  autoSyncBanner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1565C0;color:#fff;padding:10px 22px;border-radius:24px;font-size:14px;font-family:Sarabun,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
-  autoSyncBanner.textContent = '⏳ กำลังโหลดข้อมูล...';
-  document.body.appendChild(autoSyncBanner);
-  syncData(true).finally(() => {
-    autoSyncBanner.style.transition = 'opacity .4s';
-    autoSyncBanner.style.opacity = '0';
-    setTimeout(() => autoSyncBanner.remove(), 500);
+  var banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1565C0;color:#fff;padding:10px 22px;border-radius:24px;font-size:14px;font-family:Sarabun,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+  banner.textContent = '⏳ กำลังโหลดข้อมูล...';
+  document.body.appendChild(banner);
+  syncData(true).finally(function() {
+    banner.style.transition = 'opacity .4s';
+    banner.style.opacity = '0';
+    setTimeout(function() { banner.remove(); }, 500);
   });
 }
-
-// sync เมื่อผู้ใช้กลับมาที่แท็บ
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && GAS_URL) {
-    syncData(true);
-  }
-});
 </script>
 </body>
 </html>

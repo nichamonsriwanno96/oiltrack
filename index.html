@@ -209,21 +209,17 @@ tr:hover td{background:#F8FBFF}
 <div id="page-settings" class="page">
   <h2 style="margin-bottom:18px">⚙️ ตั้งค่าระบบ</h2>
 
-  <!-- Google Sheets connection -->
+  <!-- Connection status — simplified, URL ฝังในโค้ดแล้ว -->
   <div class="config-panel" style="margin-bottom:20px">
-    <h3 style="margin-bottom:12px">🔗 เชื่อมต่อ Google Sheets</h3>
-    <div class="form-grid">
-      <div>
-        <label>Google Apps Script URL</label>
-        <input type="url" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec" oninput="saveConfig()">
-      </div>
+    <h3 style="margin-bottom:10px">🔗 สถานะการเชื่อมต่อ Google Sheets</h3>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:13px;color:#546E7A">เชื่อมต่ออัตโนมัติ — ไม่ต้องตั้งค่า</span>
+      <button class="btn btn-primary btn-sm" onclick="checkConn()">🔗 ตรวจสอบการเชื่อมต่อ</button>
+      <button class="btn btn-outline btn-sm" onclick="syncData()">🔄 ดึงข้อมูลใหม่</button>
     </div>
-    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="testConnection()">🔗 ทดสอบการเชื่อมต่อ</button>
-      <button class="btn btn-success" onclick="initRemoteSheets()">🏗 สร้าง Sheets (ครั้งแรก)</button>
-      <button class="btn btn-outline" onclick="syncData()">🔄 ดึงข้อมูลใหม่</button>
-    </div>
-    <div id="connStatus" style="margin-top:12px;font-size:13px"></div>
+    <div id="connStatus" style="margin-top:10px;font-size:13px"></div>
+    <!-- gasUrl hidden — URL ฝังในโค้ด ไม่ต้องกรอก -->
+    <input type="hidden" id="gasUrl">
   </div>
 
   <!-- Oil type management -->
@@ -239,15 +235,6 @@ tr:hover td{background:#F8FBFF}
 
   <!-- How to use -->
   <div class="card" style="padding:18px;margin-top:20px">
-    <h3 style="margin-bottom:10px">📋 วิธีใช้งาน Google Sheets</h3>
-    <ol style="font-size:14px;line-height:2;color:#546E7A;padding-left:20px">
-      <li>สร้าง Google Spreadsheet ใหม่</li>
-      <li>ไปที่ Extensions → Apps Script</li>
-      <li>วางโค้ดจากไฟล์ <code>Code.gs</code> ลงไป</li>
-      <li>รัน function <code>setup()</code> เพื่อสร้าง Sheet</li>
-      <li>Deploy → New deployment → Web app (Anyone can access)</li>
-      <li>Copy URL มาวางในช่องด้านบน แล้วกด "ทดสอบการเชื่อมต่อ"</li>
-    </ol>
   </div>
 </div>
 
@@ -545,7 +532,9 @@ tr:hover td{background:#F8FBFF}
 <script>
 'use strict';
 // ========== CONFIG ==========
-let GAS_URL = localStorage.getItem('gas_url') || '';
+// URL ฝังไว้ในระบบ — ทุกคนที่เปิดไฟล์นี้จะเชื่อมต่อ Sheet อัตโนมัติ
+const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbyPAiHbiSizuoufYwZsiKZBSyUv76nM65-m9M-6IaPDnuX7QGKKSTAaSmFTgwXumaeL/exec';
+let GAS_URL = HARDCODED_GAS_URL; // ฝัง URL ไว้เลย ไม่ต้องตั้งค่า
 // DB.OilRecords เก็บทุก oil type รวมกัน แยกด้วย field oilType
 let DB = { Machines:[], OilRecords:[], Cars:[], Bookings:[], Repairs:[] };
 
@@ -814,13 +803,12 @@ function syncData(silent) {
   });
 }
 
-function testConnection() {
-  GAS_URL = document.getElementById('gasUrl').value.trim();
-  localStorage.setItem('gas_url', GAS_URL);
-  document.getElementById('connStatus').innerHTML = '<span style="color:#F57F17">⏳ กำลังทดสอบ...</span>';
+function checkConn() {
+  document.getElementById('connStatus').innerHTML = '<span style="color:#F57F17">⏳ กำลังตรวจสอบ...</span>';
   apiGet({ action:'getAll' }).then(function(d) {
     if (d.error) throw new Error(d.error);
-    document.getElementById('connStatus').innerHTML = '<span style="color:var(--success)">✅ เชื่อมต่อสำเร็จ! พบข้อมูล ' + (d.Machines ? d.Machines.length : 0) + ' เครื่องจักร</span>';
+    var cnt = d.Machines ? d.Machines.length : 0;
+    document.getElementById('connStatus').innerHTML = '<span style="color:var(--success)">✅ เชื่อมต่อสำเร็จ! พบข้อมูล ' + cnt + ' เครื่องจักร</span>';
     var norm = normalizeDB(d);
     Object.keys(DB).forEach(function(k) { if (norm[k]) DB[k] = norm[k]; });
     if (d.OilConfig) applyRemoteOilConfig(d.OilConfig);
@@ -829,6 +817,8 @@ function testConnection() {
     document.getElementById('connStatus').innerHTML = '<span style="color:var(--danger)">❌ ' + e.message + '</span>';
   });
 }
+// compat alias
+function testConnection() { checkConn(); }
 
 function initRemoteSheets() {
   apiPost({ action:'init' }).then(function(r) {
@@ -1704,22 +1694,22 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(function(m) { m.classList.remove('open'); });
 });
 
-var savedUrl = localStorage.getItem('gas_url') || '';
-if (savedUrl) { document.getElementById('gasUrl').value = savedUrl; GAS_URL = savedUrl; }
+// URL ฝังในโค้ดแล้ว ไม่ต้องตั้งค่า
+GAS_URL = HARDCODED_GAS_URL;
+if (document.getElementById('gasUrl')) document.getElementById('gasUrl').value = GAS_URL;
 
 renderDashboard();
 
-if (GAS_URL) {
-  var banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1565C0;color:#fff;padding:10px 22px;border-radius:24px;font-size:14px;font-family:Sarabun,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
-  banner.textContent = '⏳ กำลังโหลดข้อมูล...';
-  document.body.appendChild(banner);
-  syncData(true).finally(function() {
-    banner.style.transition = 'opacity .4s';
-    banner.style.opacity = '0';
-    setTimeout(function() { banner.remove(); }, 500);
-  });
-}
+// Auto-sync ทันทีทุกครั้งที่เปิด
+var banner = document.createElement('div');
+banner.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1565C0;color:#fff;padding:10px 22px;border-radius:24px;font-size:14px;font-family:Sarabun,sans-serif;z-index:3000;box-shadow:0 4px 16px rgba(0,0,0,.2)';
+banner.textContent = '⏳ กำลังโหลดข้อมูล...';
+document.body.appendChild(banner);
+syncData(true).finally(function() {
+  banner.style.transition = 'opacity .4s';
+  banner.style.opacity = '0';
+  setTimeout(function() { banner.remove(); }, 500);
+});
 </script>
 </body>
 </html>

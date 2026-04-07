@@ -546,7 +546,13 @@ tr:hover td{background:#F8FBFF}
 'use strict';
 // ========== CONFIG ==========
 let GAS_URL = localStorage.getItem('gas_url') || '';
-let DB = { Machines:[], Engine:[], Gear:[], Hydraulic:[], Grease:[], Cars:[], Bookings:[], Repairs:[] };
+// DB.OilRecords เก็บทุก oil type รวมกัน แยกด้วย field oilType
+let DB = { Machines:[], OilRecords:[], Cars:[], Bookings:[], Repairs:[] };
+
+// helper: กรองเฉพาะ type ที่ต้องการ
+function getOilRecords(type) {
+  return (DB.OilRecords || []).filter(function(r) { return r.oilType === type; });
+}
 
 const OIL_CONFIG_DEFAULT = {
   Engine:    { label:'น้ำมันเครื่อง',   icon:'🔧', interval:500,  subTypes:[] },
@@ -566,11 +572,14 @@ let iconPickerTarget = null;
 // ========== OIL CONFIG STORAGE ==========
 function saveOilConfig(pushToSheet) {
   localStorage.setItem('oil_config', JSON.stringify(OIL_CONFIG));
-  if (pushToSheet && GAS_URL) {
-    apiPost({ action: 'saveOilConfig', config: OIL_CONFIG })
-      .then(function() { toast('💾 บันทึกการตั้งค่าไป Sheet แล้ว ✓', 'success'); })
-      .catch(function() { toast('⚠️ บันทึก local แล้ว แต่ยังไม่ได้ sync ไป Sheet', ''); });
-  }
+  if (!pushToSheet) return;
+  if (!GAS_URL) { toast('⚠️ ยังไม่ได้ตั้งค่า URL — บันทึกเฉพาะ local', ''); return; }
+  apiSaveOilConfig(OIL_CONFIG)
+    .then(function(r) {
+      if (r && r.success) toast('☁️ บันทึกการตั้งค่าไป Sheet สำเร็จ ✓', 'success');
+      else toast('⚠️ Sheet ตอบ: ' + JSON.stringify(r), 'error');
+    })
+    .catch(function(e) { toast('❌ Push ไม่สำเร็จ: ' + (e.message || e), 'error'); });
 }
 
 function applyRemoteOilConfig(remoteConfig) {
@@ -689,6 +698,22 @@ function normalizeDB(data) {
   Object.keys(data).forEach(function(sheet) {
     out[sheet] = Array.isArray(data[sheet]) ? data[sheet].map(normalizeRecord) : data[sheet];
   });
+
+  // รวม OilRecords จาก sheet ใหม่ + sheet เก่า (Engine/Gear/Hydraulic/Grease) เพื่อ backward compat
+  var combined = (out['OilRecords'] || []).slice();
+  ['Engine','Gear','Hydraulic','Grease'].forEach(function(oldType) {
+    if (Array.isArray(out[oldType])) {
+      out[oldType].forEach(function(r) {
+        // ถ้าไม่มี oilType ให้ใส่ชื่อ sheet เดิมเป็น oilType
+        if (!r.oilType) r.oilType = oldType;
+        // ตรวจไม่ให้ซ้ำ
+        if (!combined.some(function(x) { return x.id === r.id; })) {
+          combined.push(r);
+        }
+      });
+    }
+  });
+  out['OilRecords'] = combined;
   return out;
 }
 
@@ -758,9 +783,18 @@ function apiGet(params) {
   return fetch(GAS_URL + '?' + q).then(function(r) { return r.json(); });
 }
 
+// GAS Web App: ส่งทุก operation ผ่าน GET เพราะ POST ติด CORS preflight
 function apiPost(body) {
   if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); return Promise.reject(new Error('No URL')); }
-  return fetch(GAS_URL, { method:'POST', body: JSON.stringify(body) }).then(function(r) { return r.json(); });
+  var url = GAS_URL + '?payload=' + encodeURIComponent(JSON.stringify(body)) + '&_t=' + Date.now();
+  return fetch(url).then(function(r) { return r.json(); });
+}
+
+// OilConfig ส่งผ่าน GET เช่นกัน
+function apiSaveOilConfig(config) {
+  if (!GAS_URL) return Promise.reject(new Error('No URL'));
+  var url = GAS_URL + '?action=saveOilConfig&configJson=' + encodeURIComponent(JSON.stringify(config)) + '&_t=' + Date.now();
+  return fetch(url).then(function(r) { return r.json(); });
 }
 
 function syncData(silent) {
@@ -812,7 +846,7 @@ function getMachineStatus(machineId) {
   var detail      = {};
 
   Object.keys(OIL_CONFIG).forEach(function(type) {
-    var rows  = (DB[type] || []).filter(function(r) { return String(r.machineId) === String(machineId); });
+    var rows  = getOilRecords(type).filter(function(r) { return String(r.machineId) === String(machineId); });
     var subs  = getSubTypes(machineId, type);
     var dataSubs = rows.map(function(r) { return r.subType; }).filter(Boolean);
     var allSubs  = subs.length > 0 ? Array.from(new Set(subs.concat(dataSubs))) : [];
@@ -934,7 +968,7 @@ function renderMachineDetail(m) {
 function renderOilSection(m, type, cfg) {
   var mId   = m.id;
   var mName = m.name.replace(/'/g, "\\'");
-  var rows  = (DB[type] || []).filter(function(r) { return String(r.machineId) === String(mId); });
+  var rows  = getOilRecords(type).filter(function(r) { return String(r.machineId) === String(mId); });
   var subs  = getSubTypes(mId, type);
   var dataSubs = Array.from(new Set(rows.map(function(r) { return r.subType; }).filter(Boolean)));
   var merged   = subs.length > 0 ? Array.from(new Set(subs.concat(dataSubs))) : [null];
@@ -1005,7 +1039,7 @@ function addSubTypeInline(machineId, machineName, type) {
 }
 
 function deleteSubType(machineId, machineName, type, subType) {
-  var hasData = (DB[type] || []).some(function(r) { return String(r.machineId) === String(machineId) && r.subType === subType; });
+  var hasData = getOilRecords(type).some(function(r) { return String(r.machineId) === String(machineId) && r.subType === subType; });
   var isBase  = isBaseSubType(type, subType);
   var msg     = '🗑 ลบประเภทย่อย "' + subType + '" ออกจากรายการ?\nเครื่อง: ' + machineName.replace(/\\'/g,"'") +
     (isBase ? '\n📌 ประเภทนี้เป็น default — กู้คืนได้ด้วยการกด ＋ เพิ่ม ชื่อเดิม' : '') +
@@ -1166,7 +1200,10 @@ function saveOilRecord() {
   if (rateVal) saveRate(mId, type, subType, rateVal);
 
   var record = {
-    id: uuid(), machineId: mId, machineName: mName.replace(/\\'/g,"'"), subType: subType,
+    id: uuid(), machineId: mId, machineName: mName.replace(/\\'/g,"'"),
+    oilType: type,   // key จาก OIL_CONFIG เช่น 'Engine', 'Gear', 'OilType_xxx'
+    oilLabel: cfg.label,  // ชื่อที่อ่านได้ เช่น 'น้ำมันเครื่อง'
+    subType: subType,
     prevHours: +document.getElementById('o-prevhours').value || null,
     currentHours: curHours ? +curHours : null,
     changeDate: changeDate, nextHours: nextHours, nextDate: nextDate,
@@ -1178,8 +1215,9 @@ function saveOilRecord() {
     note: document.getElementById('o-note').value
   };
 
-  if (!DB[type]) DB[type] = [];
-  DB[type].push(record);
+  // เก็บใน DB.OilRecords (รวมทุก type ไว้ที่เดียว)
+  if (!DB.OilRecords) DB.OilRecords = [];
+  DB.OilRecords.push(record);
   closeModal('oilModal');
   expandedMachine = mId;
   renderMachines(); renderDashboard();
@@ -1195,7 +1233,8 @@ function saveOilRecord() {
     }
   }
 
-  apiPost({ action:'add', sheet:type, data:record })
+  // ส่งไป Sheet ชื่อ 'OilRecords' ชีทเดียว
+  apiPost({ action:'add', sheet:'OilRecords', data:record })
     .then(function() { toast('💾 บันทึกสำเร็จ และซิงค์แล้ว ✓', 'success'); })
     .catch(function() { toast('⚠️ Offline — ข้อมูลยังไม่ซิงค์ กด 🔄 Sync', 'error'); });
 }
@@ -1250,9 +1289,10 @@ function deleteMachine(id) {
 
 function deleteRecord(type, id) {
   if (!confirm('ลบรายการนี้?')) return;
-  DB[type] = DB[type].filter(function(r) { return String(r.id) !== String(id); });
+  // ลบจาก OilRecords
+  DB.OilRecords = (DB.OilRecords || []).filter(function(r) { return String(r.id) !== String(id); });
   renderMachines(); renderDashboard();
-  apiPost({ action:'delete', sheet:type, id:id }).catch(function(){});
+  apiPost({ action:'delete', sheet:'OilRecords', id:id }).catch(function(){});
 }
 
 // ========== CARS ==========
@@ -1534,9 +1574,13 @@ function saveOilConfigDebounced() {
 
 function forcePushOilConfig() {
   if (!GAS_URL) { toast('กรุณาตั้งค่า URL ก่อน', 'error'); return; }
-  apiPost({ action:'saveOilConfig', config:OIL_CONFIG })
-    .then(function() { toast('☁️ Push การตั้งค่าไป Sheet สำเร็จ ✓', 'success'); })
-    .catch(function(e) { toast('❌ Push ไม่สำเร็จ', 'error'); });
+  toast('⏳ กำลัง push ไป Sheet...', '');
+  apiSaveOilConfig(OIL_CONFIG)
+    .then(function(r) {
+      if (r && r.success) toast('☁️ Push การตั้งค่าไป Sheet สำเร็จ ✓', 'success');
+      else toast('⚠️ Sheet ตอบ: ' + JSON.stringify(r), 'error');
+    })
+    .catch(function(e) { toast('❌ Push ไม่สำเร็จ: ' + (e.message || e), 'error'); });
 }
 
 function renderOilConfigSettings() {

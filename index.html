@@ -60,7 +60,7 @@ h3{font-size:16px;font-weight:700;color:#263238}
 .card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
 
 /* ===== STATUS BADGES ===== */
-.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;white-space:nowrap}
 .badge-overdue{background:var(--danger-light);color:var(--danger);border:1px solid #EF9A9A}
 .badge-urgent{background:var(--orange-light);color:var(--orange);border:1px solid #FFCC80}
 .badge-soon{background:var(--warning-light);color:var(--warning);border:1px solid #FFF176}
@@ -94,8 +94,8 @@ h3{font-size:16px;font-weight:700;color:#263238}
 .machine-card.status-soon{border-left-color:var(--warning)}
 .machine-card.status-ok{border-left-color:var(--success)}
 .machine-name{font-size:15px;font-weight:700;color:#1a1a2e}
-.machine-info{font-size:12px;color:#78909C;margin:4px 0 10px}
-.oil-chips{display:flex;flex-wrap:wrap;gap:5px}
+.machine-info{font-size:12px;color:#78909C;margin:4px 0 8px}
+.oil-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
 
 /* ===== DETAIL PANEL ===== */
 .detail-panel{background:#F5F7FA;border-top:1.5px solid var(--border);padding:16px}
@@ -501,8 +501,17 @@ tr:hover td{background:#F8FBFF}
     <div class="modal-header"><span style="font-size:20px">🔧</span><h3 id="repairModalTitle">บันทึกการซ่อม</h3></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="form-group"><label>เครื่องจักร *</label>
+        <div class="form-group full">
+          <label>ประเภทยานพาหนะ</label>
+          <div style="display:flex;gap:8px">
+            <button type="button" id="r-type-machine" class="btn btn-primary btn-sm" onclick="switchRepairType('machine')" style="flex:1">🚜 เครื่องจักร</button>
+            <button type="button" id="r-type-car" class="btn btn-sm" style="flex:1;background:#E8F5E9;color:var(--success);border:1.5px solid #A5D6A7" onclick="switchRepairType('car')">🚗 รถบริษัท</button>
+          </div>
+        </div>
+        <div class="form-group" id="r-machine-group"><label>เครื่องจักร *</label>
           <select id="r-machine"><option value="">— เลือก —</option></select></div>
+        <div class="form-group" id="r-car-group" style="display:none"><label>รถบริษัท *</label>
+          <select id="r-car"><option value="">— เลือก —</option></select></div>
         <div class="form-group"><label>วันที่ซ่อม * (พ.ศ.)</label>
           <input id="r-date" placeholder="เช่น 2569-03-27"></div>
         <div class="form-group full"><label>รายละเอียดงานซ่อม *</label>
@@ -513,8 +522,8 @@ tr:hover td{background:#F8FBFF}
           <input id="r-tech" placeholder="ชื่อช่าง"></div>
         <div class="form-group"><label>สถานะ</label>
           <select id="r-status"><option>เปิด</option><option>กำลังซ่อม</option><option>เสร็จแล้ว</option></select></div>
-        <div class="form-group"><label>ชั่วโมงเครื่อง (ตอนซ่อม)</label>
-          <input type="number" id="r-hours" placeholder="ชม."></div>
+        <div class="form-group"><label>ชั่วโมงเครื่อง / กม. (ตอนซ่อม)</label>
+          <input type="number" id="r-hours" placeholder="ชม. หรือ กม."></div>
         <div class="form-group full"><label>หมายเหตุ</label>
           <input id="r-note"></div>
       </div>
@@ -632,17 +641,20 @@ function todayThai() {
 function parseAnyDate(s) {
   if (!s) return null;
   var str = String(s).trim();
+  // ISO datetime เช่น 2025-09-09T17:00:00.000Z → แปลงตรง (เป็น ค.ศ. อยู่แล้ว)
   if (str.indexOf('T') !== -1) {
     var d = new Date(str);
     if (!isNaN(d)) return d;
   }
   var p = str.split('-');
   if (p.length === 3) {
-    var y = parseInt(p[0], 10);
-    var m = parseInt(p[1], 10) - 1;
+    var y   = parseInt(p[0], 10);
+    var m   = parseInt(p[1], 10) - 1;
     var day = parseInt(p[2], 10);
     if (isNaN(y) || isNaN(m) || isNaN(day)) return null;
-    var year = y > 2400 ? y - 543 : y;
+    // ปี > 2100 = พ.ศ. (เช่น 2568) → แปลงเป็น ค.ศ.
+    // ปี ≤ 2100 = ค.ศ. (เช่น 2025) → ใช้ตรง
+    var year = y > 2100 ? y - 543 : y;
     return new Date(year, m, day);
   }
   return null;
@@ -650,20 +662,50 @@ function parseAnyDate(s) {
 
 function toThaiDateStr(s) {
   if (!s) return '';
-  var d = parseAnyDate(s);
-  if (!d || isNaN(d)) return String(s).split('T')[0];
-  var y = d.getFullYear() + 543;
-  var m = String(d.getMonth()+1).padStart(2,'0');
-  var dd = String(d.getDate()).padStart(2,'0');
-  return y + '-' + m + '-' + dd;
+  var str = String(s).trim();
+  // ถ้าเป็น ISO datetime → แปลงผ่าน parseAnyDate แล้วบวก 543
+  if (str.indexOf('T') !== -1) {
+    var d = new Date(str);
+    if (!isNaN(d)) {
+      var y2 = d.getFullYear() + 543;
+      return y2 + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    }
+    return str.split('T')[0];
+  }
+  // ถ้าเป็น YYYY-MM-DD แล้ว → ตรวจว่าเป็น พ.ศ. หรือ ค.ศ.
+  var p = str.split('-');
+  if (p.length === 3) {
+    var y = parseInt(p[0], 10);
+    // ปี > 2100 = พ.ศ. อยู่แล้ว → คืนตรง
+    if (y > 2100) return str;
+    // ปี ≤ 2100 = ค.ศ. → บวก 543
+    if (!isNaN(y)) return (y + 543) + '-' + p[1] + '-' + p[2];
+  }
+  return str;
 }
 
 var THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 function formatThaiDate(s) {
   if (!s) return '—';
-  var d = parseAnyDate(s);
-  if (!d || isNaN(d)) return String(s).split('T')[0];
-  return d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear()+543);
+  var str = String(s).trim();
+  // ISO datetime → Date object (ค.ศ.) → แสดง พ.ศ.
+  if (str.indexOf('T') !== -1) {
+    var d = new Date(str);
+    if (!isNaN(d)) return d.getDate() + ' ' + THAI_MONTHS[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+    return str.split('T')[0];
+  }
+  var p = str.split('-');
+  if (p.length === 3) {
+    var y   = parseInt(p[0], 10);
+    var mon = parseInt(p[1], 10) - 1;
+    var day = parseInt(p[2], 10);
+    if (isNaN(y) || isNaN(mon) || isNaN(day)) return str;
+    // ปี > 2100 = พ.ศ. อยู่แล้ว → แสดงตรง
+    if (y > 2100) return day + ' ' + THAI_MONTHS[mon] + ' ' + y;
+    // ปี ≤ 2100 = ค.ศ. → บวก 543
+    return day + ' ' + THAI_MONTHS[mon] + ' ' + (y + 543);
+  }
+  return str;
 }
 
 function thaiToDate(s) { return parseAnyDate(s); }
@@ -916,8 +958,20 @@ function renderMachines() {
       var items = ms.detail[type] || [];
       var worst = items.length ? items.reduce(function(a,b) { return PRIO.indexOf(a.status) <= PRIO.indexOf(b.status) ? a : b; }) : { status:'unknown', days:null };
       var d     = (worst.days !== undefined && worst.days !== null) ? worst.days : null;
-      var dayTxt = d === null ? '' : (d < 0 ? ' ' + Math.abs(d) + 'วผ' : ' ' + d + 'ว');
-      return '<span class="badge badge-' + worst.status + '" title="' + cfg.label + '">' + cfg.icon + ' ' + cfg.label + dayTxt + '</span>';
+      var dayTxt, dayLabel;
+      if (d === null) {
+        dayTxt = ''; dayLabel = '—';
+      } else if (d < 0) {
+        dayTxt = ' | เลยกำหนด ' + Math.abs(d) + ' วัน';
+        dayLabel = 'เลยกำหนด ' + Math.abs(d) + ' วัน';
+      } else if (d === 0) {
+        dayTxt = ' | ถึงกำหนดวันนี้';
+        dayLabel = 'ถึงกำหนดวันนี้';
+      } else {
+        dayTxt = ' | อีก ' + d + ' วัน';
+        dayLabel = 'อีก ' + d + ' วัน';
+      }
+      return '<span class="badge badge-' + worst.status + '" title="' + cfg.label + ' — ' + dayLabel + '">' + cfg.icon + ' ' + cfg.label + dayTxt + '</span>';
     }).join('');
 
     var expanded = expandedMachine === m.id;
@@ -981,8 +1035,18 @@ function renderOilSection(m, type, cfg) {
     var delBtn    = canDel ? '<button class="btn btn-sm" style="background:#FFEBEE;color:var(--danger);padding:3px 8px;font-size:11px" title="' + (isBase ? 'ลบออก (กู้คืนได้)' : 'ลบออก') + '" onclick="event.stopPropagation();deleteSubType(\'' + mId + '\',\'' + mName + '\',\'' + type + '\',\'' + stEsc + '\')">🗑 ลบ</button>' : '';
 
     var histHtml = sorted.slice(1,5).map(function(r) {
-      return '<div class="history-row"><span>' + formatThaiDate(r.changeDate) + '</span><span>' + (r.currentHours!=null ? numFmt(r.currentHours)+' ชม.' : '—') + '</span><span>→ ' + formatThaiDate(r.nextDate) + '</span><button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px" onclick="event.stopPropagation();deleteRecord(\'' + type + '\',\'' + r.id + '\')">✕</button></div>';
+      return '<div class="history-row">' +
+        '<span>' + formatThaiDate(r.changeDate) + '</span>' +
+        '<span>' + (r.currentHours!=null ? numFmt(r.currentHours)+' ชม.' : '—') + '</span>' +
+        '<span>→ ' + formatThaiDate(r.nextDate) + '</span>' +
+        '<div style="display:flex;gap:4px">' +
+          '<button class="btn btn-sm btn-warning" style="padding:2px 6px;font-size:11px" onclick="event.stopPropagation();openEditOilModal(\'' + type + '\',\'' + r.id + '\')">✏️</button>' +
+          '<button class="btn btn-sm btn-danger" style="padding:2px 6px;font-size:11px" onclick="event.stopPropagation();deleteRecord(\'' + type + '\',\'' + r.id + '\')">✕</button>' +
+        '</div>' +
+      '</div>';
     }).join('');
+
+    var latestEditBtn = latest ? '<button class="btn btn-sm btn-warning" style="padding:3px 8px;font-size:11px;margin-top:6px" onclick="event.stopPropagation();openEditOilModal(\'' + type + '\',\'' + latest.id + '\')">✏️ แก้ไขรายการนี้</button>' : '';
 
     var latestHtml = latest ?
       '<div style="font-size:12px;color:#546E7A;margin-top:6px;line-height:1.8">เปลี่ยนล่าสุด: <strong>' + formatThaiDate(latest.changeDate) + '</strong>' +
@@ -992,6 +1056,7 @@ function renderOilSection(m, type, cfg) {
       (latest.liters ? ' &nbsp;|&nbsp; ' + latest.liters + ' ล.' : '') +
       (latest.technicianName ? ' &nbsp;|&nbsp; ช่าง: <strong>' + latest.technicianName + '</strong>' : '') +
       (latest.note ? '<br><em style="color:#90A4AE">📝 ' + latest.note + '</em>' : '') + '</div>' +
+      latestEditBtn +
       (sorted.length > 1 ? '<details style="margin-top:6px"><summary style="font-size:11px;color:#90A4AE;cursor:pointer">📋 ประวัติ (' + (sorted.length-1) + ' รายการ)</summary><div style="margin-top:4px">' + histHtml + '</div></details>' : '')
       : '<div style="font-size:12px;color:#90A4AE;margin-top:4px">ยังไม่มีข้อมูล — กด <strong>+ บันทึก</strong> เพื่อเริ่มต้น</div>';
 
@@ -1060,6 +1125,56 @@ function renderRepairSection(machineId) {
         (r.note ? '<div style="font-size:12px;color:#90A4AE;margin-top:2px">📝 ' + r.note + '</div>' : '') +
       '</div>';
     }).join('') + '</div></div>';
+}
+
+var _editOilRecordId = null;
+
+// เปิด modal แก้ไขรายการที่มีอยู่
+function openEditOilModal(type, recordId) {
+  event && event.stopPropagation && event.stopPropagation();
+  var rec = (DB.OilRecords || []).find(function(r) { return r.id === recordId; });
+  // fallback: ค้นหาใน type-specific arrays (ข้อมูลเก่า)
+  if (!rec) {
+    rec = (DB[type] || []).find(function(r) { return r.id === recordId; });
+  }
+  if (!rec) { toast('ไม่พบรายการ', 'error'); return; }
+
+  _editOilRecordId = recordId;
+  var cfg = OIL_CONFIG[type] || { label: type, icon: '🛢', interval: 500, subTypes: [] };
+
+  document.getElementById('oilModalIcon').textContent      = cfg.icon;
+  document.getElementById('oilModalTitle').textContent     = '✏️ แก้ไข ' + cfg.label;
+  document.getElementById('oilModalMachine').textContent   = rec.machineName || '';
+  document.getElementById('oilModalTypeLabel').textContent = cfg.label;
+  document.getElementById('nextDateCalcLabel').textContent = '';
+
+  // เติมข้อมูลเดิม
+  document.getElementById('o-prevhours').value = rec.prevHours  || '';
+  document.getElementById('o-curhours').value  = rec.currentHours != null ? rec.currentHours : '';
+  document.getElementById('o-date').value      = rec.changeDate  || '';
+  document.getElementById('o-nexthours').value = rec.nextHours   || '';
+  document.getElementById('o-nextdate').value  = rec.nextDate    || '';
+  document.getElementById('o-brand').value     = rec.oilBrand    || '';
+  document.getElementById('o-grade').value     = rec.oilGrade    || '';
+  document.getElementById('o-liters').value    = rec.liters      || '';
+  document.getElementById('o-tech').value      = rec.technicianName || '';
+  document.getElementById('o-note').value      = rec.note        || '';
+  document.getElementById('o-rate').value      = '';
+  var filterEl = document.getElementById('o-filter');
+  if (filterEl) filterEl.value = rec.filterChanged || '';
+
+  var stg   = document.getElementById('subTypeGroup');
+  var stSel = document.getElementById('o-subtype');
+  var subs  = getSubTypes(rec.machineId, type);
+  if (subs.length > 0) {
+    stg.style.display = '';
+    stSel.innerHTML = subs.map(function(s) { return '<option value="' + s + '">' + s + '</option>'; }).join('');
+    if (rec.subType) stSel.value = rec.subType;
+  } else { stg.style.display = 'none'; }
+  document.getElementById('filterGroup').style.display = (type === 'Hydraulic') ? '' : 'none';
+
+  currentOilCtx = { machineId: rec.machineId, machineName: rec.machineName, type: type, subType: rec.subType || '' };
+  document.getElementById('oilModal').classList.add('open');
 }
 
 // ========== OIL MODAL ==========
@@ -1137,6 +1252,7 @@ function onSubTypeChange() {
 
 function openOilModal(machineId, machineName, type, subType) {
   event && event.stopPropagation && event.stopPropagation();
+  _editOilRecordId = null; // reset edit mode
   currentOilCtx = { machineId:machineId, machineName:machineName, type:type, subType:subType||'' };
   var cfg = OIL_CONFIG[type];
   document.getElementById('oilModalIcon').textContent      = cfg.icon;
@@ -1190,10 +1306,9 @@ function saveOilRecord() {
   if (rateVal) saveRate(mId, type, subType, rateVal);
 
   var record = {
-    id: uuid(), machineId: mId, machineName: mName.replace(/\\'/g,"'"),
-    oilType: type,   // key จาก OIL_CONFIG เช่น 'Engine', 'Gear', 'OilType_xxx'
-    oilLabel: cfg.label,  // ชื่อที่อ่านได้ เช่น 'น้ำมันเครื่อง'
-    subType: subType,
+    id: _editOilRecordId || uuid(),
+    machineId: mId, machineName: mName.replace(/\\'/g,"'"),
+    oilType: type, oilLabel: cfg.label, subType: subType,
     prevHours: +document.getElementById('o-prevhours').value || null,
     currentHours: curHours ? +curHours : null,
     changeDate: changeDate, nextHours: nextHours, nextDate: nextDate,
@@ -1205,14 +1320,25 @@ function saveOilRecord() {
     note: document.getElementById('o-note').value
   };
 
-  // เก็บใน DB.OilRecords (รวมทุก type ไว้ที่เดียว)
   if (!DB.OilRecords) DB.OilRecords = [];
-  DB.OilRecords.push(record);
+  if (_editOilRecordId) {
+    // อัปเดตใน OilRecords
+    var idx = DB.OilRecords.findIndex(function(r) { return r.id === _editOilRecordId; });
+    if (idx >= 0) { DB.OilRecords[idx] = record; }
+    else {
+      // fallback: อาจอยู่ใน array เก่า → เพิ่มใน OilRecords แทน
+      DB.OilRecords.push(record);
+    }
+  } else {
+    DB.OilRecords.push(record);
+  }
+
   closeModal('oilModal');
+  _editOilRecordId = null;
   expandedMachine = mId;
   renderMachines(); renderDashboard();
 
-  if (nextDate) {
+  if (!_editOilRecordId && nextDate) {
     var days = daysUntil(nextDate);
     if (days !== null && days <= 14) {
       var subLabel = subType ? ' (' + subType + ')' : '';
@@ -1223,10 +1349,10 @@ function saveOilRecord() {
     }
   }
 
-  // ส่งไป Sheet ชื่อ 'OilRecords' ชีทเดียว
-  apiPost({ action:'add', sheet:'OilRecords', data:record })
-    .then(function() { toast('💾 บันทึกสำเร็จ และซิงค์แล้ว ✓', 'success'); })
-    .catch(function() { toast('⚠️ Offline — ข้อมูลยังไม่ซิงค์ กด 🔄 Sync', 'error'); });
+  var apiAction = _editOilRecordId ? { action:'update', sheet:'OilRecords', id:record.id, data:record } : { action:'add', sheet:'OilRecords', data:record };
+  apiPost(apiAction)
+    .then(function() { toast('💾 บันทึกสำเร็จ ✓', 'success'); })
+    .catch(function() { toast('⚠️ Offline — กด 🔄 Sync', 'error'); });
 }
 
 // ========== MACHINE MODAL ==========
@@ -1285,6 +1411,12 @@ function deleteRecord(type, id) {
   apiPost({ action:'delete', sheet:'OilRecords', id:id }).catch(function(){});
 }
 
+function openRepairForCar(carId) {
+  openRepairModal(null);
+  switchRepairType('car');
+  document.getElementById('r-car').value = carId;
+}
+
 // ========== CARS ==========
 var editCarId = null;
 
@@ -1299,7 +1431,7 @@ function renderCars() {
       '<td class="nowrap">' + numFmt(c.prevKm) + ' กม.</td><td class="nowrap">' + formatThaiDate(c.changeDate) + '</td>' +
       '<td class="nowrap" style="font-weight:700;color:var(--primary)">' + numFmt(c.nextKm) + ' กม.</td>' +
       '<td>' + badge(status, diff !== null ? (diff <= 0 ? 'เลย '+Math.abs(diff)+' กม.' : 'เหลือ '+diff+' กม.') : '—') + '</td>' +
-      '<td class="nowrap"><button class="btn btn-sm btn-warning" onclick="openCarModal(\'' + c.id + '\')">✏️</button> <button class="btn btn-sm btn-danger" onclick="deleteCar(\'' + c.id + '\')">🗑</button></td></tr>';
+      '<td class="nowrap"><button class="btn btn-sm btn-warning" onclick="openCarModal(\'' + c.id + '\')">✏️</button> <button class="btn btn-sm" style="background:#EDE7F6;color:var(--purple)" onclick="openRepairForCar(\'' + c.id + '\')">🔧</button> <button class="btn btn-sm btn-danger" onclick="deleteCar(\'' + c.id + '\')">🗑</button></td></tr>';
   }).join('') || '<tr><td colspan="8" style="color:#90A4AE;text-align:center;padding:20px">ยังไม่มีข้อมูล</td></tr>';
 }
 
@@ -1433,30 +1565,71 @@ function deleteBooking(id) {
 // ========== REPAIRS ==========
 var editRepairId = null;
 
+var _repairType = 'machine'; // 'machine' or 'car'
+
+function switchRepairType(type) {
+  _repairType = type;
+  document.getElementById('r-machine-group').style.display = type === 'machine' ? '' : 'none';
+  document.getElementById('r-car-group').style.display     = type === 'car'     ? '' : 'none';
+  var mBtn = document.getElementById('r-type-machine');
+  var cBtn = document.getElementById('r-type-car');
+  mBtn.className = 'btn btn-sm' + (type === 'machine' ? ' btn-primary' : '');
+  cBtn.className = 'btn btn-sm' + (type === 'car'     ? ' btn-success' : '');
+  if (type === 'machine') { mBtn.style.cssText = 'flex:1'; cBtn.style.cssText = 'flex:1;background:#E8F5E9;color:var(--success);border:1.5px solid #A5D6A7'; }
+  else { cBtn.style.cssText = 'flex:1'; mBtn.style.cssText = 'flex:1;background:#E3F2FD;color:var(--primary);border:1.5px solid #90CAF9'; }
+}
+
 function openRepairModal(machineId) {
   event && event.stopPropagation && event.stopPropagation();
   editRepairId = null;
+  _repairType = 'machine';
+  switchRepairType('machine');
   document.getElementById('repairModalTitle').textContent = 'บันทึกการซ่อม';
+
+  // เครื่องจักร dropdown
   var mSel = document.getElementById('r-machine');
   mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(function(m) {
-    return '<option value="' + m.id + '"' + (String(m.id)===String(machineId) ? ' selected' : '') + '>' + m.name + '</option>';
+    return '<option value="' + m.id + '"' + (String(m.id) === String(machineId) ? ' selected' : '') + '>' + m.name + '</option>';
   }).join('');
+
+  // รถบริษัท dropdown
+  var cSel = document.getElementById('r-car');
+  cSel.innerHTML = '<option value="">— เลือก —</option>' + (DB.Cars || []).map(function(c) {
+    return '<option value="' + c.id + '">' + (c.plateNo || c.carNo || '—') + (c.carNo ? ' (' + c.carNo + ')' : '') + '</option>';
+  }).join('');
+
   ['r-date','r-detail','r-shop','r-tech','r-hours','r-note'].forEach(function(id) {
     document.getElementById(id).value = '';
   });
-  document.getElementById('r-date').value = todayThai();
+  document.getElementById('r-date').value   = todayThai();
   document.getElementById('r-status').value = 'เปิด';
   document.getElementById('repairModal').classList.add('open');
 }
 
 function saveRepair() {
-  var machineId    = document.getElementById('r-machine').value;
   var repairDate   = document.getElementById('r-date').value;
   var repairDetail = document.getElementById('r-detail').value.trim();
-  if (!machineId || !repairDate || !repairDetail) { toast('กรุณากรอก เครื่อง, วันที่ และ รายละเอียด', 'error'); return; }
-  var machine = DB.Machines.find(function(m) { return String(m.id) === String(machineId); });
+  if (!repairDate || !repairDetail) { toast('กรุณากรอก วันที่ และ รายละเอียด', 'error'); return; }
+
+  var machineId, machineName, vehicleType;
+  if (_repairType === 'car') {
+    var carId = document.getElementById('r-car').value;
+    if (!carId) { toast('กรุณาเลือกรถบริษัท', 'error'); return; }
+    var car = (DB.Cars || []).find(function(c) { return String(c.id) === String(carId); });
+    machineId   = 'car_' + carId;
+    machineName = (car ? (car.plateNo || car.carNo || '—') : '—') + ' (รถบริษัท)';
+    vehicleType = 'car';
+  } else {
+    machineId = document.getElementById('r-machine').value;
+    if (!machineId) { toast('กรุณาเลือกเครื่องจักร', 'error'); return; }
+    var machine = DB.Machines.find(function(m) { return String(m.id) === String(machineId); });
+    machineName = machine ? machine.name : '';
+    vehicleType = 'machine';
+  }
+
   var data = {
-    id: editRepairId || uuid(), machineId: machineId, machineName: machine ? machine.name : '',
+    id: editRepairId || uuid(), machineId: machineId, machineName: machineName,
+    vehicleType: vehicleType,
     repairDate: repairDate, repairDetail: repairDetail,
     repairShop: document.getElementById('r-shop').value,
     technicianName: document.getElementById('r-tech').value,
@@ -1498,17 +1671,34 @@ function editRepair(id) {
   if (!r) return;
   editRepairId = id;
   document.getElementById('repairModalTitle').textContent = 'แก้ไขการซ่อม';
+
+  // ตั้งค่า dropdown ทั้งสองฝั่ง
   var mSel = document.getElementById('r-machine');
   mSel.innerHTML = '<option value="">— เลือก —</option>' + DB.Machines.map(function(m) {
-    return '<option value="' + m.id + '"' + (String(m.id)===String(r.machineId) ? ' selected' : '') + '>' + m.name + '</option>';
+    return '<option value="' + m.id + '">' + m.name + '</option>';
   }).join('');
-  document.getElementById('r-date').value   = r.repairDate||'';
-  document.getElementById('r-detail').value = r.repairDetail||'';
-  document.getElementById('r-shop').value   = r.repairShop||'';
-  document.getElementById('r-tech').value   = r.technicianName||'';
-  document.getElementById('r-hours').value  = r.hours||'';
-  document.getElementById('r-status').value = r.status||'เปิด';
-  document.getElementById('r-note').value   = r.note||'';
+  var cSel = document.getElementById('r-car');
+  cSel.innerHTML = '<option value="">— เลือก —</option>' + (DB.Cars || []).map(function(c) {
+    return '<option value="' + c.id + '">' + (c.plateNo || c.carNo || '—') + (c.carNo ? ' (' + c.carNo + ')' : '') + '</option>';
+  }).join('');
+
+  // สลับประเภท
+  if (r.vehicleType === 'car') {
+    switchRepairType('car');
+    var carId = r.machineId.replace('car_', '');
+    document.getElementById('r-car').value = carId;
+  } else {
+    switchRepairType('machine');
+    document.getElementById('r-machine').value = r.machineId || '';
+  }
+
+  document.getElementById('r-date').value   = r.repairDate || '';
+  document.getElementById('r-detail').value = r.repairDetail || '';
+  document.getElementById('r-shop').value   = r.repairShop || '';
+  document.getElementById('r-tech').value   = r.technicianName || '';
+  document.getElementById('r-hours').value  = r.hours || '';
+  document.getElementById('r-status').value = r.status || 'เปิด';
+  document.getElementById('r-note').value   = r.note || '';
   document.getElementById('repairModal').classList.add('open');
 }
 
